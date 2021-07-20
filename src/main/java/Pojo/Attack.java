@@ -1,17 +1,14 @@
 package Pojo;
 
-import org.nd4j.linalg.api.ndarray.INDArray;
-
 import org.nd4j.linalg.factory.Nd4j;
-
-import org.tensorflow.DataType;
-import org.tensorflow.ndarray.*;
 import org.tensorflow.Graph;
+import org.tensorflow.ndarray.Shape;
 import org.tensorflow.op.Scope;
 import org.tensorflow.op.core.Variable;
+import org.tensorflow.types.TFloat32;
 
 import java.lang.reflect.Constructor;
-import java.util.logging.Logger;
+import java.lang.reflect.Field;
 
 
 public class Attack extends Variables {
@@ -36,6 +33,7 @@ public class Attack extends Variables {
 
     //Todo session待定
     public Attack(String loss_fn, int phrase_length, int max_audio_len, int learning_rate, int num_iterations, int batch_size, boolean mp3, float l2penalty, String restore_path) {
+        super();
 
         this.loss_fn = loss_fn;
         this.phrase_length = phrase_length;
@@ -51,11 +49,20 @@ public class Attack extends Variables {
         Scope scope = new Scope(graph);
 
         // 通过反射获取shape构造函数
-        Object shape = null;
+        Shape shape = null;
+        Variable.Options options = null;
         try {
-            Class clazz = Class.forName("org.tensorflow.ndarray.Shape");
-            Constructor ShapeConstructor = clazz.getConstructor(long[].class);
+            Class shape_class =  Class.forName("org.tensorflow.ndarray.Shape");
+            Constructor<Shape> ShapeConstructor = shape_class.getDeclaredConstructor(long[].class);
             shape = ShapeConstructor.newInstance(Nd4j.zeros(batch_size, max_audio_len).shape());
+
+            Class options_class = Class.forName("org.tensorflow.op.core.Variable$Options");
+            Constructor<Variable.Options> optionsConstructor = options_class.getDeclaredConstructor();
+            options = optionsConstructor.newInstance();
+
+            Field sharedName = options_class.getDeclaredField("sharedName");
+            sharedName.set(options, "qq_delta");
+
         } catch (ClassNotFoundException exception){
             System.err.println("找不到Shape所在的包");
         } catch (NoSuchMethodException exception){
@@ -64,7 +71,9 @@ public class Attack extends Variables {
             System.err.println("生成Shape对象出错");
         }
 
-        INDArray delta = Variable.create(graph, shape, );
+
+        String sharedName = "";
+        Variable<TFloat32> delta = Variable.create(scope, shape, TFloat32.DTYPE, options);
 
 
 //        super(delta, mask, cw_mask, original, lengths, importance, target_phrase, target_phrase_lengths, rescale, apply_delta, new_input, logits, loss, ctc_loss, train, decode);
