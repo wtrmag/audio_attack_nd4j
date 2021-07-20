@@ -32,12 +32,12 @@
         <dependency>
             <groupId>org.tensorflow</groupId>
             <artifactId>tensorflow-core-api</artifactId>
-            <version>0.3.1</version>
+            <version>0.2.0</version>
         </dependency>
         <dependency>
             <groupId>org.tensorflow</groupId>
             <artifactId>tensorflow-core-platform</artifactId>
-            <version>0.3.1</version>
+            <version>0.2.0</version>
         </dependency>
 <!--        <dependency>-->
 <!--            <groupId>org.tensorflow</groupId>-->
