@@ -29,6 +29,22 @@
             <artifactId>nd4j-tensorflow</artifactId>
             <version>1.0.0-beta7</version>
         </dependency>
+        <dependency>
+            <groupId>org.tensorflow</groupId>
+            <artifactId>tensorflow-core-api</artifactId>
+            <version>0.3.1</version>
+        </dependency>
+        <dependency>
+            <groupId>org.tensorflow</groupId>
+            <artifactId>tensorflow-core-platform</artifactId>
+            <version>0.3.1</version>
+        </dependency>
+<!--        <dependency>-->
+<!--            <groupId>org.tensorflow</groupId>-->
+<!--            <artifactId>tensorflow-core-api</artifactId>-->
+<!--            <version>0.3.1</version>-->
+<!--            <classifier>windows-x86_64${javacpp.platform.extension}</classifier>-->
+<!--        </dependency>-->
     </dependencies>
 
 </project>
