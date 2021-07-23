@@ -12,6 +12,10 @@ import org.tensorflow.framework.*;
  */
 public class Variables {
 
+    public static final float infinity = (float) (1 / 0.0);
+
+    public static final long[] perm = {0, 1, 2};
+
     public INDArray delta;
 
     public INDArray mask;
