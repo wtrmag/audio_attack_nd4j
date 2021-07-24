@@ -6,6 +6,7 @@
         <sourceOutputDir name="target/generated-sources/annotations" />
         <sourceTestOutputDir name="target/generated-test-sources/test-annotations" />
         <outputRelativeToContentRoot value="true" />
+        <module name="audio_adversarial_examples_nd4j" />
         <module name="audio_attack" />
       </profile>
     </annotationProcessing>

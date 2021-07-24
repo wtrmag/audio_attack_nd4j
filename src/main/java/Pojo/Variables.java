@@ -3,6 +3,7 @@ package Pojo;
 import org.nd4j.linalg.api.ndarray.INDArray;
 
 import org.nd4j.linalg.factory.Nd4j;
+import org.tensorflow.Operand;
 import org.tensorflow.Operation;
 import org.tensorflow.framework.*;
 

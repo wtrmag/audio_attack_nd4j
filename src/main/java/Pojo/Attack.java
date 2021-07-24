@@ -125,16 +125,6 @@ public class Attack {
             System.err.println("生成对象出错");
         }
 
-//        Variable<TFloat32> delta = Variable.create(scope, shape, TFloat32.DTYPE, hashMap.get("qq_delta"));
-//        Variable<TFloat32> mask = Variable.create(scope, shape, TFloat32.DTYPE, hashMap.get("qq_mask"));
-//        Variable<TFloat32> cwmask = Variable.create(scope, shape, TFloat32.DTYPE, hashMap.get("qq_cwmask"));
-//        Variable<TFloat32> original = Variable.create(scope, shape, TFloat32.DTYPE, hashMap.get("qq_original"));
-//        Variable<TFloat32> lengths = Variable.create(scope, shape, TFloat32.DTYPE, hashMap.get("qq_lengths"));
-//        Variable<TFloat32> importance =Variable.create(scope, shape, TFloat32.DTYPE, hashMap.get("qq_importance"));
-//        Variable<TFloat32> target_phrase = Variable.create(scope, shape, TFloat32.DTYPE, hashMap.get("qq_phrase"));
-//        Variable<TFloat32> target_phrasew_lengths = Variable.create(scope, shape, TFloat32.DTYPE, hashMap.get("qq_phrase_lengths"));
-//        Variable<TFloat32> rescale = Variable.create(scope, shape, TFloat32.DTYPE, hashMap.get("qq_phrase_lengths"));
-
         Operand<TFloat32> delta = tf.variable(shape1, TFloat32.class, hashMap.get("qq_delta"));
         Operand<TFloat32> mask = tf.variable(shape1, TFloat32.class, hashMap.get("qq_mask"));
         Operand<TFloat32> cwmask = tf.variable(shape2, TFloat32.class, hashMap.get("qq_cwmask"));
@@ -144,7 +134,6 @@ public class Attack {
         Operand<TFloat32> target_phrase = tf.variable(shape2, TFloat32.class, hashMap.get("qq_phrase"));
         Operand<TFloat32> target_phrasew_lengths = tf.variable(shape3, TFloat32.class, hashMap.get("qq_phrase_lengths"));
         Operand<TFloat32> rescale = tf.variable(shape4, TFloat32.class, hashMap.get("qq_phrase_lengths"));
-
 
         float min = -2000;
         float max = 2000;
