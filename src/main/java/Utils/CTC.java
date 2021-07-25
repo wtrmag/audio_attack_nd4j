@@ -1,5 +1,6 @@
 package Utils;
 
+import Lib.SparseTensor;
 import Pojo.Variables;
 import org.nd4j.common.io.CollectionUtils;
 import org.tensorflow.Operand;
@@ -11,6 +12,7 @@ import org.tensorflow.op.dtypes.Cast;
 import org.tensorflow.op.linalg.Transpose;
 import org.tensorflow.op.math.Less;
 import org.tensorflow.op.sparse.SparseSplit;
+import org.tensorflow.op.sparse.SparseTensorDenseAdd;
 import org.tensorflow.types.TFloat32;
 
 import java.util.ArrayList;
@@ -24,12 +26,12 @@ import java.util.List;
 public class CTC extends RawOp {
 
     /**
-     * Todo Mike Henry's implementation, with some minor modifications.
+     * Mike Henry's implementation, with some minor modifications.
      * @param labels
      * @param label_lengths
      * @return
      */
-    public Operand ctc_label_dense_to_sparse(Ops tf, Operand labels, Operand label_lengths) {
+    public SparseTensor ctc_label_dense_to_sparse(Ops tf, Operand labels, Operand label_lengths) {
 
         Shape label_shape = tf.shape(labels);
         float f0 = (float) label_shape.shape().asArray()[1];
@@ -65,7 +67,7 @@ public class CTC extends RawOp {
         Transpose indices = tf.linalg.transpose(tf.reshape(tf.concat(list, tf.constant((float) 0)), tf.constant(new float[] {2, -1})), tf.constant(Variables.perm));
         GatherNd vals_sparse = tf.gatherNd(labels, indices);
 
-        return vals_sparse;
+        return new SparseTensor(indices, vals_sparse, label_shape);
     }
 
     /**

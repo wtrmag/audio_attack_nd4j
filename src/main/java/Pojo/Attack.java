@@ -152,9 +152,9 @@ public class Attack {
 //        saver.restore(sess, restore_path);
 
         //Todo 重写ctc_label_dense_to_sparse
-//        if ("CTC".equals(loss_fn)) {
-//
-//        }
+        if ("CTC".equals(loss_fn)) {
+
+        }
 
 
 
