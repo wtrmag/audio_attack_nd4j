@@ -31,7 +31,7 @@ public class CTC extends RawOp {
      * @param label_lengths
      * @return
      */
-    public SparseTensor ctc_label_dense_to_sparse(Ops tf, Operand labels, Operand label_lengths) {
+    public static SparseTensor ctc_label_dense_to_sparse(Ops tf, Operand labels, Operand label_lengths) {
 
         Shape label_shape = tf.shape(labels);
         float f0 = (float) label_shape.shape().asArray()[1];

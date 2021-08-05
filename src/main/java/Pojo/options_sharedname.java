@@ -7,7 +7,7 @@ package Pojo;
 public enum options_sharedname {
     delta("qq_delta"),
     mask("qq_mask"),
-    cmask("qq_cmask"),
+    cwmask("qq_cwmask"),
     original("qq_original"),
     lengths("qq_lengths"),
     importance("qq_importance"),

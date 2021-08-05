@@ -5,7 +5,11 @@ import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.factory.Nd4j;
 import org.tensorflow.Operand;
 import org.tensorflow.Operation;
+import org.tensorflow.Session;
 import org.tensorflow.framework.*;
+import org.tensorflow.op.Ops;
+
+import java.util.ArrayList;
 
 
 /**
@@ -13,9 +17,15 @@ import org.tensorflow.framework.*;
  */
 public class Variables {
 
-    public static final float infinity = (float) (1 / 0.0);
+    public static final float infinity = Float.POSITIVE_INFINITY;
 
     public static final long[] perm = {0, 1, 2};
+
+    public static final String RESULTS = "src/main/resources/results";
+
+    public static final String TEMP = "sec/main/resources/temp";
+
+    public static final String FFMPEG_PATH = "D:\\ffmpeg-n4.4-18-gc813f5e343-win64-gpl-4.4\\bin\\ffmpeg.exe";
 
     public INDArray delta;
 
@@ -68,6 +78,21 @@ public class Variables {
         this.ctc_loss = ctc_loss;
         this.train = train;
         this.decode = decode;
+    }
+
+    public static ArrayList global_variables(Operand delta, Operand mask, Operand cwmask, Operand original, Operand lengths, Operand importance, Operand target_phrase, Operand target_phrasew_lengths, Operand rescale) {
+        ArrayList list = new ArrayList();
+        list.add(delta);
+        list.add(mask);
+        list.add(cwmask);
+        list.add(original);
+        list.add(lengths);
+        list.add(importance);
+        list.add(target_phrase);
+        list.add(target_phrasew_lengths);
+        list.add(rescale);
+
+        return list;
     }
 
     public INDArray getDelta() {
