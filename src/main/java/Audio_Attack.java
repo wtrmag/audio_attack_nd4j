@@ -64,7 +64,7 @@ public class Audio_Attack {
     @Option(name = "-r", aliases = "restore_path",usage = "path of the DeepSpeech checkpoint", required = true)
     private String restore_path;
 
-    public void do_main(String[] args) throws IOException, UnsupportedAudioFileException, CmdLineException {
+    public void do_main(String[] args) throws Exception {
         CmdLineParser parser = new CmdLineParser(this);
         if (args.length < 1 ) {
             parser.printUsage(System.out);
@@ -83,17 +83,13 @@ public class Audio_Attack {
             assert this.input.length() == this.finetune.length();
         }
 
-//        for (int i : IntStream.range(0, this.input.length()).toArray()){
-//
-//        }
-
         //"src/main/resources/sample-000000.wav"
         WaveFileReader reader = new WaveFileReader(this.input);
         assert reader.getSampleRate() == 16000;
         //todo print dB
 //        reader.getData()
 
-        //todo finetune
+
         WaveFileReader reader2 = null;
         if (!StringUtils.equals(this.finetune, "")){
             reader2 = new WaveFileReader(this.input);
@@ -120,13 +116,15 @@ public class Audio_Attack {
         Graph graph = new Graph();
         Ops tf = Ops.create(graph);
         Session session = new Session(graph);
-        Attack attack = new Attack(graph, tf, session, "CTC", this.target.length(), maxlen, this.learning_rate,
+        Attack attack = new Attack("CTC", this.target.length(), maxlen, this.learning_rate,
                 this.iterations, audios.length, this.mp3, this.l2penalty, this.restore_path);
+        //todo do_attack方法待完成
 //        attack.do_attack();
 
         String path = null;
         if (this.mp3) {
             //Todo convert_mp3
+            throw new Exception("unfinshed");
         }else {
             if (StringUtils.equals("", this.out)) {
                 path = this.out;
@@ -137,7 +135,8 @@ public class Audio_Attack {
             if (!file.exists()){
                 file.mkdirs();
             }else {
-                //Todo
+                //Todo 输出对抗样本，需要do_attack返回值
+//                INDArray out = Nd4j
 //                WaveFileWriter writer = new WaveFileWriter(Variables.RESULTS+path, , 16000);
 
             }
@@ -153,7 +152,7 @@ public class Audio_Attack {
         Audio_Attack instance = new Audio_Attack();
         try {
             instance.do_main(args);
-        } catch (IOException | UnsupportedAudioFileException | CmdLineException e) {
+        } catch (Exception e) {
             e.printStackTrace();
         }
 

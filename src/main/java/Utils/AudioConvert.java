@@ -2,18 +2,13 @@ package Utils;
 
 import Pojo.Variables;
 import Utils.waveaccess.WaveFileWriter;
-import org.nd4j.autodiff.samediff.SameDiff;
 import org.nd4j.linalg.api.ndarray.INDArray;
-import org.nd4j.linalg.api.ops.impl.transforms.clip.ClipByValue;
 import org.nd4j.linalg.factory.Nd4j;
-import org.nd4j.linalg.ops.transforms.Transforms;
-import ws.schild.jave.*;
+import ws.schild.jave.Encoder;
+import ws.schild.jave.MultimediaObject;
 import ws.schild.jave.encode.AudioAttributes;
 import ws.schild.jave.encode.EncodingAttributes;
 
-import javax.sound.sampled.AudioInputStream;
-import javax.sound.sampled.AudioSystem;
-import javax.sound.sampled.spi.AudioFileReader;
 import java.io.File;
 import java.util.Arrays;
 
@@ -37,10 +32,17 @@ public class AudioConvert {
             trans(wav, target);
         }
 
+        //Todo
+
 
         return new double[0];
     }
 
+    /**
+     *  wav 转 MP3
+     * @param source
+     * @param target
+     */
     public static void trans(File source, File target) {
         try {
             //Audio Attributes
@@ -63,13 +65,4 @@ public class AudioConvert {
             ex.printStackTrace();
         }
     }
-
-//    public static void main(String[] args){
-//        File s = new File("src/main/resources/sample-000000.wav");
-//        s.setReadable(true);
-//        File t = new File("src/main/resources/test.mp3");
-//        t.setWritable(true);
-//
-//        trans(s, t);
-//    }
 }

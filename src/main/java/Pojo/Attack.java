@@ -2,27 +2,25 @@ package Pojo;
 
 import Lib.SparseTensor;
 import Utils.CTC;
+import org.apache.commons.lang3.StringUtils;
+import org.nd4j.linalg.api.buffer.DataType;
+import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.factory.Nd4j;
+import org.nd4j.linalg.factory.ops.NDLinalg;
 import org.tensorflow.*;
 import org.tensorflow.framework.optimizers.Adam;
-import org.tensorflow.ndarray.NdArray;
-import org.tensorflow.ndarray.NdArrays;
-import org.tensorflow.ndarray.Shape;
 import org.tensorflow.op.Op;
 import org.tensorflow.op.Ops;
 import org.tensorflow.op.core.ClipByValue;
-import org.tensorflow.op.core.Variable;
+import org.tensorflow.op.core.Print;
 import org.tensorflow.op.math.Add;
 import org.tensorflow.op.math.Mul;
 import org.tensorflow.op.nn.CtcLoss;
 import org.tensorflow.op.random.RandomStandardNormal;
 import org.tensorflow.types.TFloat32;
 
-import java.lang.reflect.Constructor;
-import java.lang.reflect.Field;
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.HashMap;
+import java.util.*;
+import java.util.stream.Collectors;
 
 public class Attack {
 
@@ -48,45 +46,40 @@ public class Attack {
 
     private String restore_path;
 
-    public Operand delta;
+    public INDArray delta;
 
-    public Operand mask;
+    public INDArray mask;
 
-    public Operand cw_mask;
+    public INDArray cw_mask;
 
-    public Operand original;
+    public INDArray original;
 
-    public Operand lengths;
+    public INDArray lengths;
 
-    public Operand importance;
+    public INDArray importance;
 
-    public Operand target_phrase;
+    public INDArray target_phrase;
 
-    public Operand target_phrase_lengths;
+    public INDArray target_phrase_lengths;
 
-    public Operand rescale;
+    public INDArray rescale;
 
-    public Operand apply_delta;
+    public INDArray apply_delta;
 
-    public Operand new_input;
+    public INDArray new_input;
 
-    public Operand logits;
+    public INDArray logits;
 
-    public Operand loss;
+    public INDArray loss;
 
-    public Operand ctc_loss;
+    public INDArray ctc_loss;
 
-    public Operand expanded_loss;
+    public INDArray expanded_loss;
 
-    public Session session;
-
-    public Op train;
-
-    //Todo unsure
-    public int[] decode;
+    public SparseTensor decode;
 
     //Todo session待定
-    public Attack(Graph graph, Ops tf, Session session, String loss_fn, int phrase_length, int max_audio_len, int learning_rate, int num_iterations, long batch_size, boolean mp3, float l2penalty, String restore_path) {
+    public Attack(String loss_fn, int phrase_length, int max_audio_len, int learning_rate, int num_iterations, long batch_size, boolean mp3, float l2penalty, String restore_path) throws Exception {
 
         this.loss_fn = loss_fn;
         this.phrase_length = phrase_length;
@@ -100,59 +93,28 @@ public class Attack {
         this.graph = graph;
         this.tf = tf;
 
-        // 通过反射获取shape构造函数
-        Shape shape1 = null;
-        Shape shape2 = null;
-        Shape shape3 = null;
-        Shape shape4 = null;
-        Variable.Options options = null;
-        HashMap<String, Variable.Options> hashMap = new HashMap<>();
-        try {
-            Class shape_class =  Class.forName("org.tensorflow.ndarray.Shape");
-            Constructor<Shape> ShapeConstructor = shape_class.getDeclaredConstructor(long[].class);
-            shape1 = ShapeConstructor.newInstance(Nd4j.zeros(batch_size, max_audio_len).shape());
-            shape2 = ShapeConstructor.newInstance(Nd4j.zeros(batch_size, phrase_length).shape());
-            shape3 = ShapeConstructor.newInstance(Nd4j.zeros(batch_size).shape());
-            shape4 = ShapeConstructor.newInstance(Nd4j.zeros(batch_size, 1).shape());
+        long[] shape1 = Nd4j.zeros(batch_size, max_audio_len).shape();
+        long[] shape2 = Nd4j.zeros(batch_size, phrase_length).shape();
+        long[] shape3 = Nd4j.zeros(batch_size).shape();
+        long[] shape4 = Nd4j.zeros(batch_size, 1).shape();
 
-            Class options_class = Class.forName("org.tensorflow.op.core.Variable$Options");
-            Constructor<Variable.Options> optionsConstructor = options_class.getDeclaredConstructor();
+        this.delta = Nd4j.create(shape1);
+        this.mask = Nd4j.create(shape1);
+        this.cw_mask = Nd4j.create(shape2);
+        this.original = Nd4j.create(shape1);
+        this.lengths = Nd4j.create(shape3);
+        this.importance = Nd4j.create(shape2);
+        this.target_phrase = Nd4j.create(shape2);
+        this.target_phrase_lengths = Nd4j.create(shape3);
+        this.rescale = Nd4j.create(shape4);
 
-            for (options_sharedname opt: options_sharedname.values()){
-                options = optionsConstructor.newInstance();
-                Field sharedName = options_class.getDeclaredField("sharedName");
-                sharedName.setAccessible(true);
-                sharedName.set(options, opt.getName());
-                hashMap.put(opt.getName(), options);
-            }
-        } catch (ClassNotFoundException exception){
-            System.err.println("找不到所在的包");
-        } catch (NoSuchMethodException exception){
-            System.err.println("无此方法");
-        } catch (Exception exception){
-            System.err.println("生成对象出错");
-        }
+        this.apply_delta = Nd4j.math.mul(Nd4j.math.clipByValue(this.delta, -2000, 2000), this.rescale);
 
-        Operand delta = tf.variable(shape1, TFloat32.class, hashMap.get("qq_delta"));
-        Operand mask = tf.variable(shape1, TFloat32.class, hashMap.get("qq_mask"));
-        Operand cw_mask = tf.variable(shape2, TFloat32.class, hashMap.get("qq_cwmask"));
-        Operand original = tf.variable(shape1, TFloat32.class, hashMap.get("qq_original"));
-        Operand lengths = tf.variable(shape3, TFloat32.class, hashMap.get("qq_lengths"));
-        Operand importance = tf.variable(shape2, TFloat32.class, hashMap.get("qq_importance"));
-        Operand target_phrase = tf.variable(shape2, TFloat32.class, hashMap.get("qq_phrase"));
-        Operand target_phrase_lengths = tf.variable(shape3, TFloat32.class, hashMap.get("qq_phrase_lengths"));
-        Operand rescale = tf.variable(shape4, TFloat32.class, hashMap.get("qq_phrase_lengths"));
+        this.new_input = Nd4j.math.add(Nd4j.math.mul(this.apply_delta, this.mask), this.original);
 
-        ArrayList list = Variables.global_variables(delta, mask, cw_mask, original, lengths, importance, target_phrase, target_phrase_lengths, rescale);
+        INDArray noise = Nd4j.random.normal(0.0, 2.0, DataType.FLOAT, this.new_input.shape());
 
-        Mul apply_data = tf.math.mul(tf.clipByValue(delta, tf.constant((float) -2000), tf.constant((float) 2000)), rescale);
-        Add new_input = tf.math.add(tf.math.mul(apply_data, mask), original);
-
-        //RandomNormal noise = new RandomNormal(tf, RandomNormal.MEAN_DEFAULT, 2.0D, tf.shape(new_input).shape().size());
-        RandomStandardNormal random = tf.random.randomStandardNormal(tf.shape(new_input), TFloat32.class);
-        Mul noise = tf.math.mul(random, tf.constant(2));
-
-        ClipByValue pass_in = tf.clipByValue(tf.math.add(new_input, noise), tf.constant((float) Math.pow(-2, 15)), tf.constant((float) Math.pow(22, 15) - 1));
+        INDArray pass_in = Nd4j.math.clipByValue(Nd4j.math.add(this.new_input, noise), Math.pow(-2, 15), Math.pow(2, 15) - 1);
 
         //Todo get_logits()待完成
 //        self.logits = logits = get_logits(pass_in, lengths)
@@ -161,75 +123,134 @@ public class Attack {
 //        Save saver = tf.train.save();
 //        saver.restore(sess, restore_path);
 
-        CtcLoss ctc_loss = null;
-        Operand loss = null;
         this.loss_fn = loss_fn;
+        INDArray ctc_loss = null;
+        INDArray loss = null;
         if ("CTC".equals(loss_fn)) {
-            SparseTensor target = CTC.ctc_label_dense_to_sparse(tf, target_phrase, target_phrase_lengths);
-
-            ctc_loss = tf.nn.ctcLoss(logits, target.getIndices(), target.getValues(), lengths);
+//            SparseTensor target = CTC.ctc_label_dense_to_sparse(target_phrase, target_phrase_lengths);
+            //todo 待验证参数
+            ctc_loss = Nd4j.loss.ctcLoss(target_phrase, this.logits, target_phrase_lengths, this.lengths);
 
             if (l2penalty != Float.MAX_VALUE){
-                loss = tf.math.add(tf.math.mean(tf.math.pow(tf.math.sub(new_input, original), tf.constant(2)), tf.constant(1)),
-                        tf.math.mul(tf.constant(l2penalty), ctc_loss.loss()));
+                loss = Nd4j.math().add(Nd4j.mean(Nd4j.math().pow(Nd4j.math().sub(this.new_input, this.original),
+                        2), 0), Nd4j.math().mul(ctc_loss, this.l2penalty));
             } else {
-                loss = ctc_loss.loss();
+                loss = ctc_loss;
             }
-            this.expanded_loss = tf.constant(0);
+            this.expanded_loss = Nd4j.arange(0);
+        }else {
+            throw new Exception("unfinished");
         }
 
-        this.ctc_loss = ctc_loss.loss();
+        this.ctc_loss = ctc_loss;
         this.loss = loss;
 
-        Adam optimizer = new Adam(graph, learning_rate);
-        this.train = optimizer.minimize(loss);
-//        this(delta, mask, cw_mask, original, lengths, importance, target_phrase, target_phrase_lengths, rescale);
+        try(EagerSession session = EagerSession.create();
+        Graph graph = new Graph()) {
+            Adam optimzer = new Adam(graph, learning_rate);
+//            optimzer.minimize(loss);
 
+        }
+//        Adam optimizer = new Adam(graph, learning_rate);
+//        this.train = optimizer.minimize(loss);
 
-        tf.nn.ctcBeamSearchDecoder(logits, lengths, 100L, 1L);
+//        tf.nn.ctcBeamSearchDecoder(logits, lengths, 100L, 1L);
+//        Ops.create().nn.ctcBeamSearchDecoder()
+
     }
 
-    public Attack(Operand delta, Operand mask, Operand cw_mask, Operand original, Operand lengths, Operand importance, Operand target_phrase, Operand target_phrase_lengths, Operand rescale) {
-        this.delta = delta;
-        this.mask = mask;
-        this.cw_mask = cw_mask;
-        this.original = original;
-        this.lengths = lengths;
-        this.importance = importance;
-        this.target_phrase = target_phrase;
-        this.target_phrase_lengths = target_phrase_lengths;
-        this.rescale = rescale;
-    }
+    public void do_attack(int[][] audio, int[] lengths, int[][] target, int[][] finetune) {
 
-    public void do_attack(int[][] audio, int[][] finetune) {
-        Session session = this.session;
-        Ops tf = this.tf;
 
-        //Todo
-//        session.run(tf.varIsInitializedOp(this.delta));
-//        session.run(tf.assignVariableOp(this.original, );
-//        session.run();
-//        session.run(tf.assignVariableOp(attack.lengths, (Operand<? extends TType>) NdArrays.ofLongs(audio.shape())));
-//        session.run(tf.assignVariableOp(attack.mask, NdArrays.));
-//        session.run(tf.assignVariableOp(attack.cw_mask, ));
-//        session.run(tf.assignVariableOp(attack.target_phrase, ));
-//        session.run(tf.assignVariableOp(attack.target_phrase_lengths, ));
+        this.original.assign(Nd4j.create(audio));
+        INDArray nd = Nd4j.create(lengths).sub(1).div(320);
+        this.lengths.assign(nd);
+
+        int[][] temp1 = new int[lengths.length][this.getMax_audio_len()];
+        for (int i : lengths) {
+            for (int j = 0; j < this.getMax_audio_len(); j++) {
+                if (j < i){
+                    temp1[i][j] = 1;
+                }else {
+                    temp1[i][j] = 0;
+                }
+            }
+        }
+        this.mask.assign(Nd4j.create(temp1));
+
+        int[][] temp2 = new int[lengths.length][(int) nd.length()];
+        for (int i : nd.toIntVector()) {
+            for (int j = 0; j < this.getPhrase_length(); j++) {
+                if (j < i){
+                    temp1[i][j] = 1;
+                }else {
+                    temp1[i][j] = 0;
+                }
+            }
+        }
+        this.cw_mask.assign(Nd4j.create(temp2));
+
+        this.target_phrase_lengths.assign(Nd4j.create(Arrays.stream(target).map(x -> {
+            return x.length;
+        }).collect(Collectors.toList())));
+
+        List ls = Arrays.stream(target).map(x -> {
+            int[] t = new int[this.getPhrase_length()];
+            for (int i = 0; i < t.length; i++) {
+                if (i < x.length){
+                    t[i] = x[i];
+                }else {
+                    t[i] = 0;
+                }
+            }
+            return t;
+        }).collect(Collectors.toList());
+        this.target_phrase.assign(Nd4j.create(ls));
+
+        this.importance.assign(Nd4j.ones(this.getBatch_size(), this.getPhrase_length()));
+        this.rescale.assign(Nd4j.ones(this.getBatch_size(), 1));
+
 
         int[] final_deltas = new int[((int) this.batch_size)];
 
         //Todo finetune
-//        if ()
+//        if finetune is not None and len(finetune) > 0:
+//        sess.run(self.delta.assign(finetune - audio))
 
         Date date = new Date();
         for (int i = 0; i < this.getNum_iterations(); i++){
             long now = date.getTime();
 
-            if (i % 10 == 0) {
-                //Todo
-//                new, delta, r_out, r_logits = sess.run((self.new_input, self.delta, self.decoded, self.logits))
-//                lst = [(r_out, r_logits)]
+            //todo print信息
+//            if (i % 10 == 0) {
+//                Map<INDArray, INDArray> lst = new HashMap<>();
+//                lst.put(this.decode, this.logits);
+//                if(this.mp3){
+//                    this.do_something();//Todo
+//                }
+//                for (Map.Entry<INDArray, INDArray> entry : lst.entrySet()){
+//                    //Todo
+//                }
+//            }
+
+            if (this.mp3){
+                this.do_something();//Todo
+            }else {
+
+            }
+
+            //todo
+//            print("%.3f" % np.mean(cl), "\t", "\t".join("%.3f" % x for x in cl))
+
+            INDArray logits = Nd4j.argMax(this.logits, 2).transpose();
+            for (int j = 0; j < this.getBatch_size(); j++) {
+//                if (StringUtils.equals("CTC", this.loss_fn) && i % 10 == 0 &&)
             }
         }
+
+    }
+
+    public void do_something(){
 
     }
 
