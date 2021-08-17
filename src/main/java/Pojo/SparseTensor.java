@@ -1,4 +1,4 @@
-package Lib;
+package Pojo;
 
 import org.nd4j.linalg.api.ndarray.INDArray;
 
@@ -8,7 +8,7 @@ public class SparseTensor {
     private final INDArray values;
     private final INDArray denseShape;
 
-    public SparseTensor (INDArray indices, INDArray values, INDArray denseShape) {
+    public SparseTensor(INDArray indices, INDArray values, INDArray denseShape) {
         this.indices =  indices;
         this.values =  values;
         this.denseShape = denseShape;

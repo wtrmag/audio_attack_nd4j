@@ -1,32 +1,22 @@
 package Pojo;
 
-import Lib.SparseTensor;
-import Utils.CTC;
+import Utils.DataConvert;
+import Utils.waveaccess.WaveFileWriter;
 import org.apache.commons.lang3.StringUtils;
 import org.nd4j.linalg.api.buffer.DataType;
 import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.factory.Nd4j;
-import org.nd4j.linalg.factory.ops.NDLinalg;
-import org.tensorflow.*;
+import org.nd4j.linalg.indexing.NDArrayIndex;
+import org.tensorflow.EagerSession;
+import org.tensorflow.Graph;
+import org.tensorflow.Operand;
 import org.tensorflow.framework.optimizers.Adam;
-import org.tensorflow.op.Op;
 import org.tensorflow.op.Ops;
-import org.tensorflow.op.core.ClipByValue;
-import org.tensorflow.op.core.Print;
-import org.tensorflow.op.math.Add;
-import org.tensorflow.op.math.Mul;
-import org.tensorflow.op.nn.CtcLoss;
-import org.tensorflow.op.random.RandomStandardNormal;
-import org.tensorflow.types.TFloat32;
 
 import java.util.*;
 import java.util.stream.Collectors;
 
 public class Attack {
-
-    public Graph graph;
-
-    public Ops tf;
 
     private String loss_fn;
 
@@ -42,7 +32,7 @@ public class Attack {
 
     private boolean mp3;
 
-    private float l2penalty = Float.MAX_VALUE;
+    private float l2penalty = Float.POSITIVE_INFINITY;
 
     private String restore_path;
 
@@ -76,9 +66,10 @@ public class Attack {
 
     public INDArray expanded_loss;
 
+    public Operand train;
+
     public SparseTensor decode;
 
-    //Todo session待定
     public Attack(String loss_fn, int phrase_length, int max_audio_len, int learning_rate, int num_iterations, long batch_size, boolean mp3, float l2penalty, String restore_path) throws Exception {
 
         this.loss_fn = loss_fn;
@@ -90,8 +81,6 @@ public class Attack {
         this.mp3 = mp3;
         this.l2penalty = l2penalty;
         this.restore_path = restore_path;
-        this.graph = graph;
-        this.tf = tf;
 
         long[] shape1 = Nd4j.zeros(batch_size, max_audio_len).shape();
         long[] shape2 = Nd4j.zeros(batch_size, phrase_length).shape();
@@ -119,19 +108,15 @@ public class Attack {
         //Todo get_logits()待完成
 //        self.logits = logits = get_logits(pass_in, lengths)
 
-       //Todo 重写tf.global_variables()
-//        Save saver = tf.train.save();
-//        saver.restore(sess, restore_path);
-
         this.loss_fn = loss_fn;
         INDArray ctc_loss = null;
         INDArray loss = null;
         if ("CTC".equals(loss_fn)) {
 //            SparseTensor target = CTC.ctc_label_dense_to_sparse(target_phrase, target_phrase_lengths);
             //todo 待验证参数
-            ctc_loss = Nd4j.loss.ctcLoss(target_phrase, this.logits, target_phrase_lengths, this.lengths);
+            ctc_loss = Nd4j.loss.ctcLoss(this.target_phrase.dup(), this.logits.dup(), this.target_phrase_lengths.dup(), this.lengths.dup());
 
-            if (l2penalty != Float.MAX_VALUE){
+            if (l2penalty != Float.POSITIVE_INFINITY){
                 loss = Nd4j.math().add(Nd4j.mean(Nd4j.math().pow(Nd4j.math().sub(this.new_input, this.original),
                         2), 0), Nd4j.math().mul(ctc_loss, this.l2penalty));
             } else {
@@ -145,22 +130,22 @@ public class Attack {
         this.ctc_loss = ctc_loss;
         this.loss = loss;
 
+
         try(EagerSession session = EagerSession.create();
         Graph graph = new Graph()) {
+            Ops tf =  Ops.create(session);
             Adam optimzer = new Adam(graph, learning_rate);
-//            optimzer.minimize(loss);
+            Operand l = DataConvert.nd2tf(tf, this.loss.dup());
 
+            this.train = l;
+//            optimzer.applyGradients(optimzer.computeGradients(l), "optimzer");
+
+//            tf.nn.ctcBeamSearchDecoder()
         }
-//        Adam optimizer = new Adam(graph, learning_rate);
-//        this.train = optimizer.minimize(loss);
-
-//        tf.nn.ctcBeamSearchDecoder(logits, lengths, 100L, 1L);
-//        Ops.create().nn.ctcBeamSearchDecoder()
 
     }
 
-    public void do_attack(int[][] audio, int[] lengths, int[][] target, int[][] finetune) {
-
+    public double[][] do_attack(int[][] audio, int[] lengths, int[][] target, int[][] finetune) {
 
         this.original.assign(Nd4j.create(audio));
         INDArray nd = Nd4j.create(lengths).sub(1).div(320);
@@ -211,7 +196,7 @@ public class Attack {
         this.rescale.assign(Nd4j.ones(this.getBatch_size(), 1));
 
 
-        int[] final_deltas = new int[((int) this.batch_size)];
+        double[][] final_deltas = new double[((int) this.batch_size)][];
 
         //Todo finetune
 //        if finetune is not None and len(finetune) > 0:
@@ -221,33 +206,65 @@ public class Attack {
         for (int i = 0; i < this.getNum_iterations(); i++){
             long now = date.getTime();
 
+            INDArray res = Nd4j.zeros(this.decode.getDenseShape().shape());
             //todo print信息
-//            if (i % 10 == 0) {
-//                Map<INDArray, INDArray> lst = new HashMap<>();
-//                lst.put(this.decode, this.logits);
+            if (i % 10 == 0) {
+                Map<SparseTensor, INDArray> lst = new HashMap<>();
+                lst.put(this.decode, this.logits);
 //                if(this.mp3){
 //                    this.do_something();//Todo
 //                }
-//                for (Map.Entry<INDArray, INDArray> entry : lst.entrySet()){
-//                    //Todo
-//                }
-//            }
+                for (Map.Entry<SparseTensor, INDArray> entry : lst.entrySet()){
+                    SparseTensor s = entry.getKey();
+                    res = res.add(Variables.TOKENS.length() - 1);
+                    for (int j = 0; j < s.getValues().length(); j++) {
+                        int x = s.getIndices().get(NDArrayIndex.point(j), NDArrayIndex.point(0)).getInt(0);
+                        int y = s.getIndices().get(NDArrayIndex.point(j), NDArrayIndex.point(1)).getInt(0);
 
-            if (this.mp3){
-                this.do_something();//Todo
-            }else {
-
+                        res.put(x, y, s.getValues().get(NDArrayIndex.point(j)));
+                        //todo print
+                    }
+                }
             }
+
+//            if (this.mp3){
+//                this.do_something();//Todo
+//            }else {
+//
+//            }
 
             //todo
 //            print("%.3f" % np.mean(cl), "\t", "\t".join("%.3f" % x for x in cl))
 
-            INDArray logits = Nd4j.argMax(this.logits, 2).transpose();
+            INDArray logits = Nd4j.argMax(this.logits.dup(), 2).transpose();
             for (int j = 0; j < this.getBatch_size(); j++) {
-//                if (StringUtils.equals("CTC", this.loss_fn) && i % 10 == 0 &&)
+                StringBuilder builder = new StringBuilder();
+                for (int x: target[j]){
+                    char c = Variables.TOKENS.charAt(x);
+                    builder.append(c);
+                }
+                if ((StringUtils.equals("CTC", this.loss_fn) && i % 10 == 0 && StringUtils.equals(res.getString(j), String.join("", builder)))
+                        || (i == this.getNum_iterations())//todo
+                ) {
+                    INDArray rescale = this.rescale.dup();
+                    if (rescale.getDouble(j) * 2000 > this.delta.dup().amaxNumber().doubleValue()){
+                        double v = this.delta.dup().get(NDArrayIndex.point(j)).amaxNumber().doubleValue() / 2000.0;
+                        System.out.println("It's way over"+v);
+                        rescale.put(j, Nd4j.create(new double[]{v}));
+                    }
+                    rescale.put(j, Nd4j.create(new double[]{rescale.getDouble(j) * 0.8}));
+
+                    final_deltas[j] = this.new_input.toDoubleMatrix()[j];
+
+                    INDArray round = Nd4j.math.round(this.new_input.dup().get(NDArrayIndex.point(j)));
+                    INDArray result = Nd4j.math.clipByValue(round, Math.pow(-2, 15), Math.pow(2, 15)-1);
+                    WaveFileWriter writer = new WaveFileWriter(Variables.TEMP+"adv.wav", result.toIntMatrix(), 16000);
+
+                }
             }
         }
 
+        return final_deltas;
     }
 
     public void do_something(){

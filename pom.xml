@@ -13,13 +13,6 @@
         <maven.compiler.target>8</maven.compiler.target>
     </properties>
 
-    <repositories>
-        <repository>
-            <id>eclipse</id>
-            <name>eclipse</name>
-            <url>https://github.com/eclipse/deeplearning4j</url>
-        </repository>
-    </repositories>
     <dependencies>
         <dependency>
             <groupId>org.deeplearning4j</groupId>
@@ -88,6 +81,12 @@
             <artifactId>mp3spi</artifactId>
             <version>1.9.5.4</version>
         </dependency>
+        <!-- https://mvnrepository.com/artifact/org.mozilla.deepspeech/libdeepspeech -->
+        <dependency>
+            <groupId>org.mozilla.deepspeech</groupId>
+            <artifactId>libdeepspeech</artifactId>
+            <version>0.9.2</version>
+            <type>aar</type>
+        </dependency>
     </dependencies>
-
 </project>
