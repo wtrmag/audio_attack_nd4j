@@ -15,6 +15,7 @@ import org.tensorflow.Operand;
 import org.tensorflow.Tensor;
 import org.tensorflow.op.Ops;
 
+import java.io.File;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -155,7 +156,8 @@ public class Tf_logits {
         //filters = np.load("filterbanks.npy").T
         //feat = tf.matmul(ffted, np.array([filters]*batch_size,dtype=np.float32))+np.finfo(float).eps
         energy=Nd4j.math.asum(ffted,2);
-        filters;
+        File file_tmp =  new File("filterbanks.npy" );
+        filters = Nd4j.createFromNpyFile(file_tmp);
         feat=filters;
         for(int i=batch_size-1;i>0;i--)
         {
@@ -215,5 +217,3 @@ public class Tf_logits {
     }
 
 }
-
-
