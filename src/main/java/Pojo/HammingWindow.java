@@ -23,24 +23,7 @@ public class HammingWindow {
         }
         for(int i=0;i<values.length;i++)
         {
-            //System.out.println("Incomming value: "+values[i]);
-            //System.out.println("Old frame: "+fileFrames[i]);
-            /*for(int j=0;j<windowSize;j++)
-            {
-                int diff=i-j;
-                double sampleFrame;
-                if(diff<0)
-                    sampleFrame=0;
-                else
-                    sampleFrame=values[diff];
-                newFrames[i]+=sampleFrame*hammingWindow[j]*2;
-            }
-            //System.out.println("New Frames (before clip check)"+i+": "+newFrames[i]);
-            if(newFrames[i]>=1)
-                newFrames[i]=0.99;
-            else if (newFrames[i]<=-1)
-                newFrames[i]=-0.99;*/
-            //System.out.println("New Frames "+i+": "+newFrames[i]);
+
             newFrames[i]=(values[i]*hammingWindow[i%windowSize]);
         }
         return newFrames;
@@ -76,28 +59,7 @@ public class HammingWindow {
             hammingWindow[i]=hammingWindow[i]/windowSize;
             //System.out.println("Hamming window "+i+": "+hammingWindow[i]);
         }
-    //    for(int i=0;i<values.length;i++)
-    //    {
-            //System.out.println("Incomming value: "+values[i]);
-            //System.out.println("Old frame: "+fileFrames[i]);
-            /*for(int j=0;j<windowSize;j++)
-            {
-                int diff=i-j;
-                double sampleFrame;
-                if(diff<0)
-                    sampleFrame=0;
-                else
-                    sampleFrame=values[diff];
-                newFrames[i]+=sampleFrame*hammingWindow[j]*2;
-            }
-            //System.out.println("New Frames (before clip check)"+i+": "+newFrames[i]);
-            if(newFrames[i]>=1)
-                newFrames[i]=0.99;
-            else if (newFrames[i]<=-1)
-                newFrames[i]=-0.99;*/
-            //System.out.println("New Frames "+i+": "+newFrames[i]);
-    //        newFrames[i]=(values[i]*hammingWindow[i%windowSize]);
-    //    }
+
         return hammingWindow;
     }
 }

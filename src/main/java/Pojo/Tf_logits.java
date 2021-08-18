@@ -27,29 +27,27 @@ public class Tf_logits {
     long batch_size_mfc_F;
     int size;
     long size_F;
-    INDArray new_input_cov;
     INDArray empty_context;
     INDArray new_input_to_mfcc;
     INDArray features;
     INDArray features_tem1;
     INDArray features_tem2;
-    ArrayList<Boolean> first_cov;
 
 
-    public Tf_logits(){
+    public INDArray Tf_logit(INDArray new_input,int length,ArrayList<Boolean> first){
     //new_input
-        batch_size_F = new_input_cov.size(0);
+        batch_size_F = new_input.size(0);
         batch_size=(int)batch_size_F;
 
         // 1. Compute the MFCCs for the input audio
         // (this is differentable with our implementation above)
         empty_context=Nd4j.zeros(new int[]{batch_size,9,26}, DataType.FLOAT);
-        new_input_to_mfcc=compute_mfcc(new_input_cov);
+        new_input_to_mfcc=compute_mfcc(new_input);
         features=Nd4j.concat(1,empty_context,new_input_to_mfcc,empty_context);
 
         //# 2. We get to see 9 frames at a time to make our decision,
         //# so concatenate them together.
-        features=features.reshape((int)new_input_cov.size(0),-1);
+        features=features.reshape((int)new_input.size(0),-1);
 
         features_tem1=features.get(NDArrayIndex.all(),NDArrayIndex.interval(0,19*26));
         for(int i=26;i<=features.shape()[1]-19*26+1;i=i+26)
@@ -63,9 +61,9 @@ public class Tf_logits {
 
         //# 3. Finally we process it with DeepSpeech
         //# We need to init DeepSpeech the first time we're called
-        if(first_cov.isEmpty())
+        if(first.isEmpty())
         {
-            first_cov.add(false);
+            first.add(false);
 
             deep
         }
@@ -122,8 +120,6 @@ public class Tf_logits {
         windowed=windowed.mmul(window);
 
         //# 3. Take the FFT to convert to frequency space
-        //ffted = tf.spectral.rfft(windowed, [512])
-        //ffted = 1.0 / 512 * tf.square(tf.abs(ffted))
         DataBuffer windowed_tmp1=windowed.data();
         int k=windowed_tmp1.getElementSize();
         double[] windowed_tmp2=new double[k];
@@ -142,19 +138,9 @@ public class Tf_logits {
         ffted_cur=Complex.Covlex(ffted_tmp);
         ffted=Nd4j.create(ffted_cur);
         ffted=Nd4j.math.square(Nd4j.math.abs(ffted)).mul(1.0/512);
-    //
-    //    Graph graph=new Graph();
-    //    Ops tf=Ops.create(graph);
 
-    //    window_op=Conver_Op(windowed);
-    //    ffted=tf.spectral.rfft(window_op,512);
-    //    ffted=1.0/512*tf.square(tf.abs(ffted));
-    //
 
         //# 4. Compute the Mel windowing of the FFT
-        //energy = tf.reduce_sum(ffted,axis=2)+np.finfo(float).eps ;
-        //filters = np.load("filterbanks.npy").T
-        //feat = tf.matmul(ffted, np.array([filters]*batch_size,dtype=np.float32))+np.finfo(float).eps
         energy=Nd4j.math.asum(ffted,2);
         File file_tmp =  new File("filterbanks.npy" );
         filters = Nd4j.createFromNpyFile(file_tmp);
@@ -169,8 +155,6 @@ public class Tf_logits {
         //***注意此处[filters]*batch_size他们的地址相同，更改一个同时更改所有
 
         //# 5. Take the DCT again, because why not
-        //feat = tf.log(feat)
-        //feat = tf.spectral.dct(feat, type=2, norm='ortho')[:,:,:26]
         feat=Nd4j.math.log(feat);
         DCT d=new DCT();
 
@@ -193,11 +177,6 @@ public class Tf_logits {
         feat=Nd4j.create(feat_tmp);
 
         //# 6. Amplify high frequencies for some reason
-        //_,nframes,ncoeff = feat.get_shape().as_list()
-        //n = np.arange(ncoeff)
-        //lift = 1 + (22/2.)*np.sin(np.pi*n/22)
-        //feat = lift*feat
-        //width = feat.get_shape().as_list()[1]
         int nframes=(int)feat.size(1);
         int ncoeff=(int)feat.size(2);
         double[] n_tmp=new double[ncoeff];
@@ -209,7 +188,6 @@ public class Tf_logits {
         int width=(int)feat.size(1);
 
         //# 7. And now stick the energy next to the features
-        //feat = tf.concat((tf.reshape(tf.log(energy),(-1,width,1)), feat[:, :, 1:]), axis=2)
         feat=Nd4j.concat(2,Nd4j.math.log(energy).reshape(-1,width,1),feat.dup().get(NDArrayIndex.all(),NDArrayIndex.all(),NDArrayIndex.interval(1,feat.size(2))));
 
         return feat;
