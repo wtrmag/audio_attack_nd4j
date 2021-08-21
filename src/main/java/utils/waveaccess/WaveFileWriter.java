@@ -1,4 +1,4 @@
-package Utils.waveaccess;
+package utils.waveaccess;
 
 import java.io.BufferedOutputStream;
 import java.io.FileOutputStream;

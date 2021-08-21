@@ -1,7 +1,7 @@
-package Utils;
+package utils;
 
-import Pojo.Variables;
-import Utils.waveaccess.WaveFileWriter;
+import pojo.Variables;
+import utils.waveaccess.WaveFileWriter;
 import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.factory.Nd4j;
 import ws.schild.jave.Encoder;

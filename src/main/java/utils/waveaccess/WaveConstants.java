@@ -1,4 +1,4 @@
-package Utils.waveaccess;
+package utils.waveaccess;
 
 public final class WaveConstants {
 	static public int LENCHUNKDESCRIPTOR = 4;

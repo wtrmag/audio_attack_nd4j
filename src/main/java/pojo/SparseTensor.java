@@ -1,4 +1,4 @@
-package Pojo;
+package pojo;
 
 import org.nd4j.linalg.api.ndarray.INDArray;
 

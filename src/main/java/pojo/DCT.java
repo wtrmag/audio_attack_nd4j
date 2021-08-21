@@ -1,15 +1,18 @@
-package Pojo;
+package pojo;
 
 
 import java.util.Arrays;
 
+/**
+ * @author ljj
+ */
 public class DCT {
 
     public double[][] process(double[][] input) {
 
-        double[][] matrix = Arrays.copyOf(input, input.length); //z
-        double[][] result = new double[input.length][input[0].length]; //z
-        double[][] result2 = new double[input.length][input[0].length]; //z
+        double[][] matrix = Arrays.copyOf(input, input.length);
+        double[][] result = new double[input.length][input[0].length];
+        double[][] result2 = new double[input.length][input[0].length];
         for(int count = 0; count < matrix.length; count++) {
             result[count] = this.dct(matrix[count]);
         }
@@ -36,7 +39,7 @@ public class DCT {
 
     public double[] dct(double[] matrix) {
         int N = matrix.length;
-        double[] output = new double[N]; //X[n]
+        double[] output = new double[N];
 
         double alfa;
         double sum;

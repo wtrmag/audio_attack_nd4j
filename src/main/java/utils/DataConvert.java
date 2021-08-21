@@ -1,12 +1,9 @@
-package Utils;
+package utils;
 
 import org.nd4j.linalg.api.ndarray.INDArray;
-import org.nd4j.linalg.factory.Nd4j;
 import org.tensorflow.Operand;
 import org.tensorflow.ndarray.buffer.ByteDataBuffer;
-import org.tensorflow.op.Operands;
 import org.tensorflow.op.Ops;
-import org.tensorflow.op.core.Constant;
 import org.tensorflow.types.family.TType;
 
 public class DataConvert {

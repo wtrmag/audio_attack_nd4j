@@ -1,4 +1,4 @@
-package Pojo;
+package pojo;
 
 import java.util.Objects;
 
@@ -13,13 +13,17 @@ public class Complex {
     }
 
     // return a string representation of the invoking Complex object
+    @Override
     public String toString() {
-        if (im == 0)
+        if (im == 0) {
             return re + "";
-        if (re == 0)
+        }
+        if (re == 0) {
             return im + "i";
-        if (im < 0)
+        }
+        if (im < 0) {
             return re + " - " + (-im) + "i";
+        }
         return re + " + " + im + "i";
     }
 
@@ -124,16 +128,20 @@ public class Complex {
     }
 
     // See Section 3.3.
+    @Override
     public boolean equals(Object x) {
-        if (x == null)
+        if (x == null) {
             return false;
-        if (this.getClass() != x.getClass())
+        }
+        if (this.getClass() != x.getClass()) {
             return false;
+        }
         Complex that = (Complex) x;
         return (this.re == that.re) && (this.im == that.im);
     }
 
     // See Section 3.3.
+    @Override
     public int hashCode() {
         return Objects.hash(re, im);
     }
@@ -187,8 +195,9 @@ public class Complex {
         int n = x.length;
 
         // exp(-2i*n*PI)=cos(-2*n*PI)+i*sin(-2*n*PI)=1
-        if (n == 1)
+        if (n == 1) {
             return new Complex[]{x[0]};
+        }
 
         Complex[] result = new Complex[n];
         for (int i = 0; i < n; i++) {

@@ -1,7 +1,7 @@
-import Pojo.Attack;
-import Pojo.Variables;
-import Utils.waveaccess.WaveFileReader;
-import Utils.waveaccess.WaveFileWriter;
+import pojo.Attack;
+import pojo.Variables;
+import utils.waveaccess.WaveFileReader;
+import utils.waveaccess.WaveFileWriter;
 import org.apache.commons.lang3.ArrayUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.kohsuke.args4j.CmdLineParser;
@@ -42,7 +42,7 @@ public class Audio_Attack {
     @Option(name = "-m", aliases = "--mp3")
     private boolean mp3 = false;
 
-    @Option(name = "-r", aliases = "restore_path",usage = "path of the DeepSpeech checkpoint", required = true)
+    @Option(name = "-r", aliases = "restore_path",usage = "path of the DeepSpeech checkpoint")
     private String restore_path;
 
     public void do_main(String[] args) throws Exception {
@@ -54,13 +54,13 @@ public class Audio_Attack {
 
         parser.parseArgument(args);
 
-        if (StringUtils.equals(this.out, "")) {
-            assert !StringUtils.equals(this.out_prefix, "");
+        if (StringUtils.equals(this.out, null)) {
+            assert !StringUtils.equals(this.out_prefix, null);
         }else {
-            assert StringUtils.equals(this.out_prefix, "");
+            assert StringUtils.equals(this.out_prefix, null);
             assert this.input.length() == this.out.length();
         }
-        if (!StringUtils.equals(this.finetune, "")) {
+        if (!StringUtils.equals(this.finetune, null)) {
             assert this.input.length() == this.finetune.length();
         }
 
@@ -68,15 +68,20 @@ public class Audio_Attack {
         WaveFileReader reader = new WaveFileReader(this.input);
         assert reader.getSampleRate() == 16000;
 
+        int maxlen = Arrays.stream(reader.getData()).map(n -> n.length).collect(Collectors.toList()).stream().max(Integer::compareTo).get();
+
         //todo print dB
 //        reader.getData()
 
         WaveFileReader reader2 = null;
-        if (!StringUtils.equals(this.finetune, "")){
+        int[][] finetune = new int[][]{};
+        if (!StringUtils.equals(this.finetune, null)){
             reader2 = new WaveFileReader(this.input);
+            finetune = Arrays.stream(reader2.getData()).map(n -> {
+                int[] temp = new int[maxlen-n.length];
+                return ArrayUtils.addAll(n, temp);
+            }).collect(Collectors.toList()).toArray(new int[][]{});
         }
-
-        int maxlen = Arrays.stream(reader.getData()).map(n -> n.length).collect(Collectors.toList()).stream().max(Integer::compareTo).get();
 
         int[][] audios = Arrays.stream(reader.getData()).map(n -> {
             int[] temp = new int[maxlen-n.length];
@@ -84,11 +89,6 @@ public class Audio_Attack {
         }).collect(Collectors.toList()).toArray(new int[][]{});
 
         int[] lengths = Arrays.stream(reader.getData()).mapToInt(n -> n.length).toArray();
-
-        int[][] finetune = Arrays.stream(reader2.getData()).map(n -> {
-            int[] temp = new int[maxlen-n.length];
-            return ArrayUtils.addAll(n, temp);
-        }).collect(Collectors.toList()).toArray(new int[][]{});
 
         int[][] index = new int[audios.length][];
         for (int i = 0; i < audios.length; i++) {
@@ -101,7 +101,6 @@ public class Audio_Attack {
 
         Attack attack = new Attack("CTC", this.target.length(), maxlen, this.learning_rate,
                 this.iterations, audios.length, this.mp3, this.l2penalty, this.restore_path);
-
 
         double[][] deltas = attack.do_attack(audios, lengths, index, finetune);
 

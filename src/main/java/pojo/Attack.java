@@ -1,7 +1,8 @@
-package Pojo;
+package pojo;
 
-import Utils.DataConvert;
-import Utils.waveaccess.WaveFileWriter;
+import utils.DataConvert;
+import utils.Tf_logits;
+import utils.waveaccess.WaveFileWriter;
 import org.apache.commons.lang3.StringUtils;
 import org.nd4j.linalg.api.buffer.DataType;
 import org.nd4j.linalg.api.ndarray.INDArray;
@@ -11,6 +12,7 @@ import org.tensorflow.EagerSession;
 import org.tensorflow.Graph;
 import org.tensorflow.Operand;
 import org.tensorflow.framework.optimizers.Adam;
+import org.tensorflow.framework.optimizers.Optimizer;
 import org.tensorflow.op.Ops;
 
 import java.util.*;
@@ -105,8 +107,7 @@ public class Attack {
 
         INDArray pass_in = Nd4j.math.clipByValue(Nd4j.math.add(this.new_input, noise), Math.pow(-2, 15), Math.pow(2, 15) - 1);
 
-        //Todo get_logits()待完成
-//        self.logits = logits = get_logits(pass_in, lengths)
+        this.logits  = new Tf_logits().get_logits(pass_in, this.lengths);
 
         this.loss_fn = loss_fn;
         INDArray ctc_loss = null;
@@ -130,7 +131,6 @@ public class Attack {
         this.ctc_loss = ctc_loss;
         this.loss = loss;
 
-
         try(EagerSession session = EagerSession.create();
         Graph graph = new Graph()) {
             Ops tf =  Ops.create(session);
@@ -138,7 +138,8 @@ public class Attack {
             Operand l = DataConvert.nd2tf(tf, this.loss.dup());
 
             this.train = l;
-//            optimzer.applyGradients(optimzer.computeGradients(l), "optimzer");
+            List<Optimizer.GradAndVar<?>> list = optimzer.computeGradients(l);
+//            optimzer.applyGradients(, "optimzer");
 
 //            tf.nn.ctcBeamSearchDecoder()
         }

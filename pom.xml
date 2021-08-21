@@ -13,6 +13,18 @@
         <maven.compiler.target>8</maven.compiler.target>
     </properties>
 
+    <build>
+        <resources>
+            <resource>
+                <directory>lib</directory>
+                <targetPath>/BOOT-INF/lib/</targetPath>
+                <includes>
+                    <include>**/*.jar</include>
+                </includes>
+            </resource>
+        </resources>
+    </build>
+
     <dependencies>
         <dependency>
             <groupId>org.deeplearning4j</groupId>
@@ -34,6 +46,18 @@
             <artifactId>nd4j-api</artifactId>
             <version>1.0.0-M1.1</version>
         </dependency>
+<!--        &lt;!&ndash;https://mvnrepository.com/artifact/org.nd4j/python4j-numpy&ndash;&gt;-->
+<!--        <dependency>-->
+<!--            <groupId>org.nd4j</groupId>-->
+<!--            <artifactId>python4j-numpy</artifactId>-->
+<!--            <version>1.0.0-M1.1</version>-->
+<!--        </dependency>-->
+<!--        &lt;!&ndash; https://mvnrepository.com/artifact/org.nd4j/python4j-core &ndash;&gt;-->
+<!--        <dependency>-->
+<!--            <groupId>org.nd4j</groupId>-->
+<!--            <artifactId>python4j-core</artifactId>-->
+<!--            <version>1.0.0-M1.1</version>-->
+<!--        </dependency>-->
         <dependency>
             <groupId>org.tensorflow</groupId>
             <artifactId>tensorflow-framework</artifactId>
@@ -81,12 +105,18 @@
             <artifactId>mp3spi</artifactId>
             <version>1.9.5.4</version>
         </dependency>
-        <!-- https://mvnrepository.com/artifact/org.mozilla.deepspeech/libdeepspeech -->
+        <!-- https://mvnrepository.com/artifact/org.python/jython -->
         <dependency>
-            <groupId>org.mozilla.deepspeech</groupId>
-            <artifactId>libdeepspeech</artifactId>
-            <version>0.9.2</version>
-            <type>aar</type>
+            <groupId>org.python</groupId>
+            <artifactId>jython-standalone</artifactId>
+            <version>2.7.2</version>
         </dependency>
+<!--        <dependency>-->
+<!--            <groupId>org.jpy</groupId>-->
+<!--            <artifactId>jpy</artifactId>-->
+<!--            <version>0.10.0-SNAPSHOT</version>-->
+<!--            <scope>system</scope>-->
+<!--            <systemPath>${project.basedir}/lib/jpy-0.10.0-SNAPSHOT.jar</systemPath>-->
+<!--        </dependency>-->
     </dependencies>
 </project>
