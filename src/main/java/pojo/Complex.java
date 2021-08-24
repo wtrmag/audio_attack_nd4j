@@ -146,9 +146,6 @@ public class Complex {
         return Objects.hash(re, im);
     }
 
-
-
-
     public static Complex[] fft(Complex[] x) {
         int n = x.length;
 
