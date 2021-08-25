@@ -13,6 +13,7 @@ import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.factory.Nd4j;
 import org.nd4j.linalg.indexing.NDArrayIndex;
 import pojo.Variables;
+import pojo.FFT;
 
 import java.io.File;
 import java.util.ArrayList;
@@ -126,14 +127,18 @@ public class Tf_logits {
 //
 //        float[][] rfft = FFT.rfft(windowed_tmp3, k);
 
-        Complex[] ffted_tmp = new Complex[k];
-        for (int i = 0; i < k; i++) {
-            ffted_tmp[i] = new Complex(windowed_tmp2[i], 0);
-        }
-        double[] ffted_cur = new double[(int) windowed.size(0)];
-        ffted_tmp = Complex.fft(ffted_tmp);
-        ffted_cur = Complex.Covlex(ffted_tmp);
-        ffted = Nd4j.create(ffted_cur);
+        double[][] ffted_tmp = new double[(int)windowed.size(1)][(int)windowed.size(2)];
+//        for (int i = 0; i < k; i++) {
+//            ffted_tmp[i] = new Complex(windowed_tmp2[i], 0);
+//        }
+
+//        double[][] ffted_cur = new double[(int) windowed.size(1)][(int)windowed.size(2)/2];
+//        ffted_tmp = Complex.fft(ffted_tmp);
+        for(int i=0;i<(int)windowed.size(1);i++)
+            ffted_tmp[i]=FFT.rfft(ffted_tmp[i],ffted_tmp[i].length);
+//        ffted_cur = Complex.Covlex(ffted_tmp);
+
+        ffted = Nd4j.create(ffted_tmp);
         ffted = ffted.reshape(windowed.size(0), windowed.size(1), 512/2+1);
         ffted = Nd4j.math.square(Nd4j.math.abs(ffted)).mul(1.0 / 512);
 
