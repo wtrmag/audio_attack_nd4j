@@ -21,7 +21,7 @@ public class FFT {
      * Performs Fast Fourier Transformation (adjusted to match np.fft.rfft)
      * @see FFT
      */
-    public static double[] rfft(double[] signal, int numPoints) {
+    public static double[][] rfft(double[] signal, int numPoints) {
         // initialize real & imag array
         double[] real = Arrays.copyOf(signal, signal.length);
         double[] imag = new double[numPoints];
@@ -83,8 +83,16 @@ public class FFT {
                 UI = tempUR * SI + UI * SR;
             }
         }
-        //return new float[][]{Arrays.copyOfRange(real, 0, numPoints / 2 + 1), Arrays.copyOfRange(imag, 0, numPoints / 2 + 1)};
-        return new double[]{Array.copyOfRange(real, 0, numPoints / 2 + 1)};
+        return new double[][]{Arrays.copyOfRange(real, 0, numPoints / 2 + 1), Arrays.copyOfRange(imag, 0, numPoints / 2 + 1)};
+    }
+
+    public static double[] AbsAndSquare(double[] re,double[] im){
+        double[] result=new double[re.length];
+        for(int i=0;i<re.length;i++)
+        {
+            result[i]=Math.pow(re[i],2)+Math.pow(im[i],2);
+        }
+        return result;
     }
 
 }

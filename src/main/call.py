@@ -1,21 +1,33 @@
 import argparse
+import numpy as np
 import tensorflow as tf
 import sys
+import os
 
-sys.path.append("DeepSpeech")
+sys.path.append("src/main/DeepSpeech")
 import DeepSpeech
 
-parser = argparse.ArgumentParser()
-parser.add_argument('-f', type=list, required=True, dest="features")
-parser.add_argument('-l', type=list, required=True, dest="lengths")
-args = parser.parse_args()
-while len(sys.argv) > 1:
-    sys.argv.pop()
+if __name__ == '__main__':
+    with tf.Session() as sess:
+        parser = argparse.ArgumentParser()
+        parser.add_argument('-f', type=str, required=True, dest="features")
+        parser.add_argument('-l', type=str, required=True, dest="lengths")
+        args = parser.parse_args()
+        while len(sys.argv) > 1:
+            sys.argv.pop()
 
-with tf.Session() as sess:
-    DeepSpeech.create_flags()
-    tf.app.flags.FLAGS.alphabet_config_path = "DeepSpeech/data/alphabet.txt"
-    DeepSpeech.initialize_globals()
-    logits, _ = DeepSpeech.BiRNN(args.features, args.lengths, [0] * 10)
-    a = sess.run(logits)
-    print(a)
+        features = np.load(args.features)
+        lengths = np.load(args.lengths)
+
+        DeepSpeech.create_flags()
+        tf.app.flags.FLAGS.alphabet_config_path = "src/main/DeepSpeech/data/alphabet.txt"
+        DeepSpeech.initialize_globals()
+
+        logits, _ = DeepSpeech.BiRNN(features, lengths, [0] * 10)
+        sess.run(tf.global_variables_initializer())
+        l = sess.run(logits)
+        # print(l)
+        file = "src/main/resources/temp/"
+        if not os.path.exists(file):
+            os.mkdir(file)
+        np.save(os.path.join(file, "logits.npy"), l)

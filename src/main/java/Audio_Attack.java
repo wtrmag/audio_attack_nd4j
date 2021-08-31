@@ -100,7 +100,7 @@ public class Audio_Attack {
         }
 
         Attack attack = new Attack("CTC", this.target.length(), maxlen, this.learning_rate,
-                this.iterations, audios.length, this.mp3, this.l2penalty, this.restore_path);
+                this.iterations, audios.length, this.mp3, this.l2penalty);
 
         double[][] deltas = attack.do_attack(audios, lengths, index, finetune);
 
@@ -116,11 +116,15 @@ public class Audio_Attack {
             }
             File file = new File(Variables.RESULTS);
             if (!file.exists()){
-                file.mkdirs();
+                if (!file.getParentFile().exists()){
+                    file.getParentFile().mkdirs();
+                }
+                file.createNewFile();
             }else {
                 INDArray out = Nd4j.create(Arrays.stream(deltas[0]).limit(lengths[0]).toArray());
                 int[][] r = Nd4j.math.clipByValue(Nd4j.math.round(out), Math.pow(-2, 15), Math.pow(2, 15)-1).toIntMatrix();
                 WaveFileWriter writer = new WaveFileWriter(Variables.RESULTS+path, r, 16000);
+                writer.close();
             }
         }
     }

@@ -6,7 +6,7 @@
 
     <groupId>org.example</groupId>
     <artifactId>audio_attack</artifactId>
-    <version>1.0-SNAPSHOT</version>
+    <version>1.1</version>
 
     <properties>
         <maven.compiler.source>8</maven.compiler.source>
@@ -46,18 +46,6 @@
             <artifactId>nd4j-api</artifactId>
             <version>1.0.0-M1.1</version>
         </dependency>
-<!--        &lt;!&ndash;https://mvnrepository.com/artifact/org.nd4j/python4j-numpy&ndash;&gt;-->
-<!--        <dependency>-->
-<!--            <groupId>org.nd4j</groupId>-->
-<!--            <artifactId>python4j-numpy</artifactId>-->
-<!--            <version>1.0.0-M1.1</version>-->
-<!--        </dependency>-->
-<!--        &lt;!&ndash; https://mvnrepository.com/artifact/org.nd4j/python4j-core &ndash;&gt;-->
-<!--        <dependency>-->
-<!--            <groupId>org.nd4j</groupId>-->
-<!--            <artifactId>python4j-core</artifactId>-->
-<!--            <version>1.0.0-M1.1</version>-->
-<!--        </dependency>-->
         <dependency>
             <groupId>org.tensorflow</groupId>
             <artifactId>tensorflow-framework</artifactId>
@@ -95,22 +83,22 @@
             <version>1.16.18</version>
             <scope>provided</scope>
         </dependency>
-        <dependency>
-            <groupId>com.googlecode.soundlibs</groupId>
-            <artifactId>jlayer</artifactId>
-            <version>1.0.1.4</version>
-        </dependency>
-        <dependency>
-            <groupId>com.googlecode.soundlibs</groupId>
-            <artifactId>mp3spi</artifactId>
-            <version>1.9.5.4</version>
-        </dependency>
-        <!-- https://mvnrepository.com/artifact/org.python/jython -->
-        <dependency>
-            <groupId>org.python</groupId>
-            <artifactId>jython-standalone</artifactId>
-            <version>2.7.2</version>
-        </dependency>
+<!--        <dependency>-->
+<!--            <groupId>com.googlecode.soundlibs</groupId>-->
+<!--            <artifactId>jlayer</artifactId>-->
+<!--            <version>1.0.1.4</version>-->
+<!--        </dependency>-->
+<!--        <dependency>-->
+<!--            <groupId>com.googlecode.soundlibs</groupId>-->
+<!--            <artifactId>mp3spi</artifactId>-->
+<!--            <version>1.9.5.4</version>-->
+<!--        </dependency>-->
+<!--        &lt;!&ndash; https://mvnrepository.com/artifact/org.python/jython &ndash;&gt;-->
+<!--        <dependency>-->
+<!--            <groupId>org.python</groupId>-->
+<!--            <artifactId>jython-standalone</artifactId>-->
+<!--            <version>2.7.2</version>-->
+<!--        </dependency>-->
         <dependency>
             <groupId>org.example</groupId>
             <artifactId>SonopyJava</artifactId>

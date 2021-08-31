@@ -1,11 +1,16 @@
 package utils;
 
+import org.bytedeco.javacpp.Pointer;
 import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.factory.Nd4j;
+import pojo.Variables;
 
 import java.io.BufferedReader;
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * @author wtr
@@ -13,27 +18,62 @@ import java.io.InputStreamReader;
 public class PyCall {
 
     public static INDArray CallDeepSpeech(INDArray fetures, INDArray lengths){
-        Process proc;
+        INDArray logits = null;
         try {
-            String[] command = new String[]{"python", "src/main/call/py", "-f "+fetures, "-l "+lengths};
-            proc = Runtime.getRuntime().exec(command);
-            BufferedReader in = new BufferedReader(new InputStreamReader(proc.getInputStream()));
-            String line = null;
-            while ((line = in.readLine()) != null) {
-//                Nd4j.createNpyFromInputStream()
-                System.out.println(line);
+            DataConvert.export(Variables.TEMP, fetures, lengths);
+
+            String[] command = new String[]{Variables.PYTHON_PATH, "src/main/call.py", "-f"+Variables.TEMP+DataConvert.NPY_NAME[0], "-l"+Variables.TEMP+DataConvert.NPY_NAME[1]};
+            Process p = Runtime.getRuntime().exec(command);
+            // 防止缓冲区满, 导致卡住
+            new Thread() {
+                @Override
+                public void run() {
+                    super.run();
+                    String line;
+                    try {
+                        BufferedReader stderr = new BufferedReader(new InputStreamReader(p.getErrorStream()));
+                        while ((line = stderr.readLine()) != null) {
+                            System.out.println(line);
+                        }
+                    }
+                    catch (Exception e) {
+
+                    }
+
+                }
+            }.start();
+
+
+            new Thread() {
+                @Override
+                public void run() {
+                    super.run();
+                    String line;
+                    try {
+                        BufferedReader stdout = new BufferedReader(new InputStreamReader(p.getInputStream()));
+                        while ((line = stdout.readLine()) != null) {
+                            System.out.println(line);
+                        }
+                    }
+                    catch (Exception e) {
+
+                    }
+                }
+            }.start();
+
+            int exitVal = p.waitFor();
+            if (0 != exitVal) {
+                throw new Exception("fail to call py");
+            }else {
+                System.out.println("success");
+                logits = Nd4j.createFromNpyFile(new File(Variables.TEMP+DataConvert.NPY_NAME[2]));
             }
-            in.close();
-            if (proc.waitFor() == 1){
-                System.out.println("fail to call py");
-            }
-        } catch (IOException e) {
-            e.printStackTrace();
-        } catch (InterruptedException e) {
+        }
+        catch (Exception e) {
             e.printStackTrace();
         }
 
-        return null;
+        return logits;
     }
 
     public static void main(String[] args){
@@ -44,7 +84,16 @@ public class PyCall {
         double[] l = new double[]{51072};
         INDArray x = Nd4j.createFromArray(p);
         INDArray y = Nd4j.createFromArray(l);
-//
+
+        List<String> list = new ArrayList<>();
+        list.add(x.toString());
+        list.add(y.toString());
+
+//        DataConvert.exportCsv(new File(Variables.TEMP + "data.csv"), list);
+        System.out.println(x);
+        System.out.println(x.toString());
+        System.out.println(x.toStringFull());
+//        CallDeepSpeech(x , y);
 //        System.out.println(x.toString());
 
 //        PythonInterpreter interpreter = new PythonInterpreter();

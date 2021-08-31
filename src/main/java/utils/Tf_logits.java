@@ -1,11 +1,6 @@
 package utils;
 
-import me.gommeantilegit.sonopy.FFT;
-import org.nd4j.linalg.api.buffer.DataTypeEx;
-import org.nd4j.linalg.api.buffer.util.DataTypeUtil;
-import org.nd4j.linalg.factory.DataTypeValidation;
-import pojo.Complex;
-import pojo.DCT;
+import org.nd4j.linalg.factory.ops.NDLinalg;
 import pojo.HammingWindow;
 import org.nd4j.linalg.api.buffer.DataBuffer;
 import org.nd4j.linalg.api.buffer.DataType;
@@ -14,10 +9,9 @@ import org.nd4j.linalg.factory.Nd4j;
 import org.nd4j.linalg.indexing.NDArrayIndex;
 import pojo.Variables;
 import pojo.FFT;
+import me.gommeantilegit.sonopy.DCT;
 
 import java.io.File;
-import java.util.ArrayList;
-import java.util.Timer;
 
 public class Tf_logits {
     int batch_size;
@@ -50,20 +44,23 @@ public class Tf_logits {
         //# so concatenate them together.
         features = features.reshape((int) new_input.size(0), -1);
 
-        features_tem1 = features.get(NDArrayIndex.all(), NDArrayIndex.interval(0, 19 * 26));
-        for (int i = 26; i <= features.shape()[1] - 19 * 26 + 1; i = i + 26) {
-            features_tem2 = features.get(NDArrayIndex.all(), NDArrayIndex.interval(i, i + 19 * 26));
-            features_tem1 = Nd4j.stack(1, features_tem1, features_tem2);
+//        features_tem1 = features.get(NDArrayIndex.all(), NDArrayIndex.interval(0, 19 * 26));
+//        for (int i = 26; i <= features.shape()[1] - 19 * 26 + 1; i = i + 26) {
+//            features_tem2 = features.get(NDArrayIndex.all(), NDArrayIndex.interval(i, i + 19 * 26));
+//            features_tem1 = Nd4j.stack(1, features_tem1, features_tem2);
+//        }
+//        features = features_tem1;
+        INDArray[] f = new INDArray[(int) ((features.shape()[1] - 493) / 26 + 1)];
+        for (int i = 0; i < features.shape()[1] - 493; i = i + 26) {
+            f[i/26] = features.get(NDArrayIndex.all(), NDArrayIndex.interval(i, i + 494));
         }
-        features = features_tem1;
+        features = Nd4j.stack(1, f);
 
         features = features.reshape(batch_size, -1, 19, 26);
 
         //# 3. Finally we process it with DeepSpeech
         //# We need to init DeepSpeech the first time we're called
-        PyCall.CallDeepSpeech(features, lengths);
-
-        return null;
+        return PyCall.CallDeepSpeech(features, lengths);
     }
 
     public INDArray compute_mfcc(INDArray audio) {
@@ -85,6 +82,8 @@ public class Tf_logits {
         INDArray energy;
         INDArray filters;
 
+        NDLinalg linalg = new NDLinalg();
+
         batch_size_mfc_F = audio.size(0);
         size_F = audio.size(1);
         batch_size_mfc = (int) batch_size_mfc_F;
@@ -101,15 +100,19 @@ public class Tf_logits {
         audio = Nd4j.concat(1, audio1, audio2.sub(audio3), audio4);
 
         //# 2. windowing into frames of 512 samples, overlapping
-        windowed1 = audio.get(NDArrayIndex.all(), NDArrayIndex.interval(0, 512));
-        for (int i = 320; i <= size - 320; i = i + 320) {
-            windowed2 = audio.get(NDArrayIndex.all(), NDArrayIndex.interval(i, i + 512));
-            windowed1 = Nd4j.concat(0, windowed1, windowed2);
+//        windowed1 = audio.get(NDArrayIndex.all(), NDArrayIndex.interval(0, 512));
+//        for (int i = 320; i <= size - 320; i = i + 320) {
+//            windowed2 = audio.get(NDArrayIndex.all(), NDArrayIndex.interval(i, i + 512));
+//            windowed1 = Nd4j.concat(0, windowed1, windowed2);
+//        }
+//        windowed = Nd4j.stack(0, windowed1);
+        INDArray[] win = new INDArray[(size - 320) / 320 + 1];
+        for (int i = 0; i < size - 320; i = i + 320) {
+            win[i/320] = audio.get(NDArrayIndex.all(), NDArrayIndex.interval(i, i + 512));
         }
-        windowed = Nd4j.stack(0, windowed1);
-        window = HammingWindow.getHammingWindow(512);
+        windowed = Nd4j.stack(1, win);
 
-//        windowed=windowed.mmul(window.castTo(DataType.FLOAT));
+        window = HammingWindow.getHammingWindow(512);
         windowed = Nd4j.math.mul(windowed, window.castTo(DataType.FLOAT));
 
         //# 3. Take the FFT to convert to frequency space
@@ -120,38 +123,37 @@ public class Tf_logits {
             windowed_tmp2[i] = windowed_tmp1.getDouble(i);
         }
 
-//        float[] windowed_tmp3 = new float[k];
-//        for (int i = 0; i < k; i++) {
-//            windowed_tmp3[i] = windowed_tmp1.getFloat(i);
-//        }
-//
-//        float[][] rfft = FFT.rfft(windowed_tmp3, k);
-
         double[][] ffted_tmp = new double[(int)windowed.size(1)][(int)windowed.size(2)];
-//        for (int i = 0; i < k; i++) {
-//            ffted_tmp[i] = new Complex(windowed_tmp2[i], 0);
-//        }
 
-//        double[][] ffted_cur = new double[(int) windowed.size(1)][(int)windowed.size(2)/2];
-//        ffted_tmp = Complex.fft(ffted_tmp);
+        for(int i=0;i<(int)windowed.size(1);i++) {
+            for (int j = 0; j < (int) windowed.size(2); j++) {
+                ffted_tmp[i][j] = windowed_tmp2[i * j + j];
+            }
+        }
+        double[][][] ffted_tmp_data=new double[(int)windowed.size(1)][2][(int)windowed.size(2)/2+1];
+        for(int i=0;i<(int)windowed.size(1);i++) {
+            ffted_tmp_data[i] = FFT.rfft(ffted_tmp[i], ffted_tmp[i].length);
+        }
+        double[][] ffted_tmp_final=new double[(int)windowed.size(1)][(int)windowed.size(2)/2+1];
         for(int i=0;i<(int)windowed.size(1);i++)
-            ffted_tmp[i]=FFT.rfft(ffted_tmp[i],ffted_tmp[i].length);
-//        ffted_cur = Complex.Covlex(ffted_tmp);
+        {
+            ffted_tmp_final[i]=FFT.AbsAndSquare(ffted_tmp_data[i][0],ffted_tmp_data[i][1]);
+        }
 
-        ffted = Nd4j.create(ffted_tmp);
-        ffted = ffted.reshape(windowed.size(0), windowed.size(1), 512/2+1);
-        ffted = Nd4j.math.square(Nd4j.math.abs(ffted)).mul(1.0 / 512);
-
+        ffted = Nd4j.stack(0, Nd4j.create(ffted_tmp_final));
+        ffted = ffted.mul(1.0 / 512);
 
         //# 4. Compute the Mel windowing of the FFT
         energy = Nd4j.math.asum(ffted, 2);
         File file_tmp = new File(Variables.NPY_PATH);
-        filters = Nd4j.createFromNpyFile(file_tmp);
-        feat = filters;
-        for (int i = batch_size - 1; i > 0; i--) {
-            feat = Nd4j.concat(0, feat, feat);
+        filters = Nd4j.createFromNpyFile(file_tmp).transpose();
+
+        INDArray[] t = new INDArray[batch_size];
+        for (int i = 0; i < batch_size; i++) {
+            t[i] = filters;
         }
-        feat = ffted.mmul(feat);
+        feat = Nd4j.stack(0, t);
+        feat = linalg.mmul(ffted, feat);
         //feat=feat+eps
         //***调试增加eps值
         //***注意此处[filters]*batch_size他们的地址相同，更改一个同时更改所有
@@ -165,25 +167,23 @@ public class Tf_logits {
         b = (int) feat.size(1);
         c = (int) feat.size(2);
         DataBuffer dct_tmp1 = feat.data();
-        //int tmp=dct_tmp1.getElementSize();
-        double[][][] dct_tmp2 = new double[a][b][c];
+
+        float[][][] dct_tmp2 = new float[a][b][c];
         for (int i = 0; i < a; i++) {
             for (int j = 0; j < b; j++) {
                 for (int kk = 0; kk < c; kk++) {
-                    dct_tmp2[i][j][kk] = dct_tmp1.getDouble(i * b * c + j * c + kk);
+                    dct_tmp2[i][j][kk] = dct_tmp1.getFloat(i * b * c + j * c + kk);
                 }
             }
         }
-
-        //double[] feat_tmp=d.dct(dct_tmp2);
-        double[][][] feat_tmp = new double[a][b][c];
+        float[][][] feat_tmp = new float[a][b][c];
         for (int i = 0; i < a; i++) {
-            feat_tmp[i] = d.process(dct_tmp2[i]);
+            feat_tmp[i] = DCT.dct(dct_tmp2[i], true);
+
         }
-        feat = Nd4j.create(feat_tmp);
+        feat = Nd4j.create(feat_tmp).get(NDArrayIndex.all(), NDArrayIndex.all(), NDArrayIndex.interval(0, 26));
 
         //# 6. Amplify high frequencies for some reason
-        int nframes = (int) feat.size(1);
         int ncoeff = (int) feat.size(2);
         double[] n_tmp = new double[ncoeff];
         for (int i = 0; i < ncoeff - 1; i++) {
@@ -191,11 +191,14 @@ public class Tf_logits {
         }
         INDArray n = Nd4j.create(n_tmp);
         INDArray lift = Nd4j.math.sin(n.mul(Math.PI / 22)).mul(22 / 2.0).add(1);
-        feat = lift.mmul(feat);
+        feat = Nd4j.math.mul(lift.castTo(DataType.FLOAT), feat);
         int width = (int) feat.size(1);
 
         //# 7. And now stick the energy next to the features
-        feat = Nd4j.concat(2, Nd4j.math.log(energy).reshape(-1, width, 1), feat.dup().get(NDArrayIndex.all(), NDArrayIndex.all(), NDArrayIndex.interval(1, feat.size(2))));
+        INDArray log_e = Nd4j.math.log(energy);
+        INDArray e = log_e.dup().reshape(-1, width, 1).castTo(DataType.FLOAT);
+        INDArray f = feat.get(NDArrayIndex.all(), NDArrayIndex.all(), NDArrayIndex.interval(1, feat.size(2)));
+        feat = Nd4j.concat(2, e, f);
 
         return feat;
 

@@ -1,5 +1,6 @@
 package pojo;
 
+import utils.CTC;
 import utils.DataConvert;
 import utils.Tf_logits;
 import utils.waveaccess.WaveFileWriter;
@@ -17,6 +18,7 @@ import org.tensorflow.op.Ops;
 
 import java.util.*;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 public class Attack {
 
@@ -35,8 +37,6 @@ public class Attack {
     private boolean mp3;
 
     private float l2penalty = Float.POSITIVE_INFINITY;
-
-    private String restore_path;
 
     public INDArray delta;
 
@@ -72,7 +72,7 @@ public class Attack {
 
     public SparseTensor decode;
 
-    public Attack(String loss_fn, int phrase_length, int max_audio_len, int learning_rate, int num_iterations, long batch_size, boolean mp3, float l2penalty, String restore_path) throws Exception {
+    public Attack(String loss_fn, int phrase_length, int max_audio_len, int learning_rate, int num_iterations, long batch_size, boolean mp3, float l2penalty) {
 
         this.loss_fn = loss_fn;
         this.phrase_length = phrase_length;
@@ -82,30 +82,78 @@ public class Attack {
         this.batch_size = batch_size;
         this.mp3 = mp3;
         this.l2penalty = l2penalty;
-        this.restore_path = restore_path;
 
-        long[] shape1 = Nd4j.zeros(batch_size, max_audio_len).shape();
-        long[] shape2 = Nd4j.zeros(batch_size, phrase_length).shape();
-        long[] shape3 = Nd4j.zeros(batch_size).shape();
-        long[] shape4 = Nd4j.zeros(batch_size, 1).shape();
+//        long[] shape1 = Nd4j.zeros(batch_size, max_audio_len).shape();
+//        long[] shape2 = Nd4j.zeros(batch_size, phrase_length).shape();
+//        long[] shape3 = Nd4j.zeros(batch_size).shape();
+//        long[] shape4 = Nd4j.zeros(batch_size, 1).shape();
+    }
 
-        this.delta = Nd4j.create(shape1);
-        this.mask = Nd4j.create(shape1);
-        this.cw_mask = Nd4j.create(shape2);
-        this.original = Nd4j.create(shape1);
-        this.lengths = Nd4j.create(shape3);
-        this.importance = Nd4j.create(shape2);
-        this.target_phrase = Nd4j.create(shape2);
-        this.target_phrase_lengths = Nd4j.create(shape3);
-        this.rescale = Nd4j.create(shape4);
+    public double[][] do_attack(int[][] audio, int[] length, int[][] target, int[][] finetune) throws Exception {
 
-        this.apply_delta = Nd4j.math.mul(Nd4j.math.clipByValue(this.delta, -2000, 2000), this.rescale);
+        this.original = Nd4j.create(audio);
+        INDArray nd = Nd4j.createFromArray(length).sub(1).div(320);
+        this.lengths = nd.dup();
+        int[][] temp1 = new int[length.length][this.getMax_audio_len()];
+        for (int i = 0; i < length.length; i++) {
+            for (int j = 0; j < this.getMax_audio_len(); j++) {
+                if (j < length[i]){
+                    temp1[i][j] = 1;
+                }else {
+                    temp1[i][j] = 0;
+                }
+            }
+        }
+        this.mask = Nd4j.create(temp1);
 
-        this.new_input = Nd4j.math.add(Nd4j.math.mul(this.apply_delta, this.mask), this.original);
+        int[][] temp2 = new int[length.length][(int) nd.length()];
+        for (int i = 0; i < length.length; i++) {
+            for (int j = 0; j < this.getPhrase_length(); j++) {
+                if (j < nd.toIntVector()[i]){
+                    temp1[i][j] = 1;
+                }else {
+                    temp1[i][j] = 0;
+                }
+            }
+        }
+        this.cw_mask = Nd4j.create(temp2);
+
+        this.target_phrase_lengths = Nd4j.create(Arrays.stream(target).map(x -> x.length).collect(Collectors.toList()));
+
+        int[][] temp3 = new int[target.length][this.phrase_length];
+        List ls = Arrays.stream(target).map(x -> {
+            int[] t = new int[this.getPhrase_length()];
+            for (int i = 0; i < t.length; i++) {
+                if (i < x.length){
+                    t[i] = x[i];
+                }else {
+                    t[i] = 0;
+                }
+            }
+            return t;
+        }).collect(Collectors.toList());
+        int k = 0;
+        for (Object l: ls){
+            temp3[k++] = (int[]) l;
+        }
+        this.target_phrase = Nd4j.create(temp3);
+
+        this.importance = Nd4j.ones(this.getBatch_size(), this.getPhrase_length());
+        this.rescale = Nd4j.ones(this.getBatch_size(), 1);
+
+        this.delta = Nd4j.zeros(this.batch_size, this.max_audio_len);
+        boolean t = finetune.length != 0 && (finetune.length != 1 || finetune[0].length !=0);
+        if (t){
+            INDArray tune = Nd4j.create(finetune);
+            this.delta.assign(Nd4j.math.div(tune, this.original.dup()));
+        }
+        this.apply_delta = Nd4j.math.mul(Nd4j.math.clipByValue(this.delta.dup(), -2000, 2000), this.rescale);
+
+        this.new_input = Nd4j.math.add(Nd4j.math.mul(this.apply_delta, this.mask.dup()), this.original.dup());
 
         INDArray noise = Nd4j.random.normal(0.0, 2.0, DataType.FLOAT, this.new_input.shape());
 
-        INDArray pass_in = Nd4j.math.clipByValue(Nd4j.math.add(this.new_input, noise), Math.pow(-2, 15), Math.pow(2, 15) - 1);
+        INDArray pass_in = Nd4j.math.clipByValue(Nd4j.math.add(this.new_input.dup(), noise), Math.pow(-2, 15), Math.pow(2, 15) - 1);
 
         this.logits  = new Tf_logits().get_logits(pass_in, this.lengths);
 
@@ -113,9 +161,9 @@ public class Attack {
         INDArray ctc_loss = null;
         INDArray loss = null;
         if ("CTC".equals(loss_fn)) {
-//            SparseTensor target = CTC.ctc_label_dense_to_sparse(target_phrase, target_phrase_lengths);
-            //todo 待验证参数
-            ctc_loss = Nd4j.loss.ctcLoss(this.target_phrase.dup(), this.logits.dup(), this.target_phrase_lengths.dup(), this.lengths.dup());
+            SparseTensor labels = CTC.ctc_label_dense_to_sparse(target_phrase, target_phrase_lengths);
+
+            ctc_loss = Nd4j.loss.ctcLoss(labels.getValues().dup(), this.logits.dup(), labels.getIndices().dup(), this.lengths.dup());
 
             if (l2penalty != Float.POSITIVE_INFINITY){
                 loss = Nd4j.math().add(Nd4j.mean(Nd4j.math().pow(Nd4j.math().sub(this.new_input, this.original),
@@ -132,8 +180,9 @@ public class Attack {
         this.loss = loss;
 
         try(EagerSession session = EagerSession.create();
-        Graph graph = new Graph()) {
+            Graph graph = new Graph()) {
             Ops tf =  Ops.create(session);
+//            tf.nn.ctcLoss()
             Adam optimzer = new Adam(graph, learning_rate);
             Operand l = DataConvert.nd2tf(tf, this.loss.dup());
 
@@ -143,59 +192,6 @@ public class Attack {
 
 //            tf.nn.ctcBeamSearchDecoder()
         }
-
-    }
-
-    public double[][] do_attack(int[][] audio, int[] lengths, int[][] target, int[][] finetune) {
-
-        this.original.assign(Nd4j.create(audio));
-        INDArray nd = Nd4j.create(lengths).sub(1).div(320);
-        this.lengths.assign(nd);
-
-        int[][] temp1 = new int[lengths.length][this.getMax_audio_len()];
-        for (int i : lengths) {
-            for (int j = 0; j < this.getMax_audio_len(); j++) {
-                if (j < i){
-                    temp1[i][j] = 1;
-                }else {
-                    temp1[i][j] = 0;
-                }
-            }
-        }
-        this.mask.assign(Nd4j.create(temp1));
-
-        int[][] temp2 = new int[lengths.length][(int) nd.length()];
-        for (int i : nd.toIntVector()) {
-            for (int j = 0; j < this.getPhrase_length(); j++) {
-                if (j < i){
-                    temp1[i][j] = 1;
-                }else {
-                    temp1[i][j] = 0;
-                }
-            }
-        }
-        this.cw_mask.assign(Nd4j.create(temp2));
-
-        this.target_phrase_lengths.assign(Nd4j.create(Arrays.stream(target).map(x -> {
-            return x.length;
-        }).collect(Collectors.toList())));
-
-        List ls = Arrays.stream(target).map(x -> {
-            int[] t = new int[this.getPhrase_length()];
-            for (int i = 0; i < t.length; i++) {
-                if (i < x.length){
-                    t[i] = x[i];
-                }else {
-                    t[i] = 0;
-                }
-            }
-            return t;
-        }).collect(Collectors.toList());
-        this.target_phrase.assign(Nd4j.create(ls));
-
-        this.importance.assign(Nd4j.ones(this.getBatch_size(), this.getPhrase_length()));
-        this.rescale.assign(Nd4j.ones(this.getBatch_size(), 1));
-
 
         double[][] final_deltas = new double[((int) this.batch_size)][];
 
@@ -234,7 +230,7 @@ public class Attack {
 //
 //            }
 
-            //todo
+            //Todo
 //            print("%.3f" % np.mean(cl), "\t", "\t".join("%.3f" % x for x in cl))
 
             INDArray logits = Nd4j.argMax(this.logits.dup(), 2).transpose();
@@ -244,9 +240,9 @@ public class Attack {
                     char c = Variables.TOKENS.charAt(x);
                     builder.append(c);
                 }
-                if ((StringUtils.equals("CTC", this.loss_fn) && i % 10 == 0 && StringUtils.equals(res.getString(j), String.join("", builder)))
-                        || (i == this.getNum_iterations())//todo
-                ) {
+                boolean b = (StringUtils.equals("CTC", this.loss_fn) && i % 10 == 0 && StringUtils.equals(res.getString(j), String.join("", builder)))
+                        || (i == this.getNum_iterations());
+                if (b) {
                     INDArray rescale = this.rescale.dup();
                     if (rescale.getDouble(j) * 2000 > this.delta.dup().amaxNumber().doubleValue()){
                         double v = this.delta.dup().get(NDArrayIndex.point(j)).amaxNumber().doubleValue() / 2000.0;
@@ -260,16 +256,12 @@ public class Attack {
                     INDArray round = Nd4j.math.round(this.new_input.dup().get(NDArrayIndex.point(j)));
                     INDArray result = Nd4j.math.clipByValue(round, Math.pow(-2, 15), Math.pow(2, 15)-1);
                     WaveFileWriter writer = new WaveFileWriter(Variables.TEMP+"adv.wav", result.toIntMatrix(), 16000);
-
+                    writer.close();
                 }
             }
         }
 
         return final_deltas;
-    }
-
-    public void do_something(){
-
     }
 
     public String getLoss_fn() {
@@ -304,7 +296,4 @@ public class Attack {
         return l2penalty;
     }
 
-    public String getRestore_path() {
-        return restore_path;
-    }
 }
