@@ -42,7 +42,7 @@ public class Audio_Attack {
     @Option(name = "-m", aliases = "--mp3")
     private boolean mp3 = false;
 
-    @Option(name = "-r", aliases = "restore_path",usage = "path of the DeepSpeech checkpoint")
+    @Option(name = "-r", aliases = "restore_path",usage = "path of the DeepSpeech checkpoint", required = true)
     private String restore_path;
 
     public void do_main(String[] args) throws Exception {
@@ -100,7 +100,7 @@ public class Audio_Attack {
         }
 
         Attack attack = new Attack("CTC", this.target.length(), maxlen, this.learning_rate,
-                this.iterations, audios.length, this.mp3, this.l2penalty);
+                this.iterations, audios.length, this.mp3, this.l2penalty, this.restore_path);
 
         double[][] deltas = attack.do_attack(audios, lengths, index, finetune);
 

@@ -46,20 +46,25 @@
             <artifactId>nd4j-api</artifactId>
             <version>1.0.0-M1.1</version>
         </dependency>
+<!--        <dependency>-->
+<!--            <groupId>org.tensorflow</groupId>-->
+<!--            <artifactId>libtensorflow</artifactId>-->
+<!--            <version>1.5.0</version>-->
+<!--        </dependency>-->
         <dependency>
             <groupId>org.tensorflow</groupId>
             <artifactId>tensorflow-framework</artifactId>
-            <version>0.3.2</version>
+            <version>0.3.3</version>
         </dependency>
         <dependency>
             <groupId>org.tensorflow</groupId>
             <artifactId>tensorflow-core-generator</artifactId>
-            <version>0.3.2</version>
+            <version>0.3.3</version>
         </dependency>
         <dependency>
             <groupId>org.tensorflow</groupId>
             <artifactId>tensorflow-core-platform</artifactId>
-            <version>0.3.2</version>
+            <version>0.3.3</version>
         </dependency>
         <!-- https://mvnrepository.com/artifact/args4j/args4j -->
         <dependency>
@@ -83,22 +88,6 @@
             <version>1.16.18</version>
             <scope>provided</scope>
         </dependency>
-<!--        <dependency>-->
-<!--            <groupId>com.googlecode.soundlibs</groupId>-->
-<!--            <artifactId>jlayer</artifactId>-->
-<!--            <version>1.0.1.4</version>-->
-<!--        </dependency>-->
-<!--        <dependency>-->
-<!--            <groupId>com.googlecode.soundlibs</groupId>-->
-<!--            <artifactId>mp3spi</artifactId>-->
-<!--            <version>1.9.5.4</version>-->
-<!--        </dependency>-->
-<!--        &lt;!&ndash; https://mvnrepository.com/artifact/org.python/jython &ndash;&gt;-->
-<!--        <dependency>-->
-<!--            <groupId>org.python</groupId>-->
-<!--            <artifactId>jython-standalone</artifactId>-->
-<!--            <version>2.7.2</version>-->
-<!--        </dependency>-->
         <dependency>
             <groupId>org.example</groupId>
             <artifactId>SonopyJava</artifactId>

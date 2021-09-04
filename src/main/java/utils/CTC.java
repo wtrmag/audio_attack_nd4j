@@ -43,20 +43,21 @@ public class CTC {
         INDArray label_array = base_ops.reshape(base_ops.tile(Nd4j.arange(0, s[1]).castTo(DataType.INT64)
                 , num_batches_tns), s);
         AtomicInteger index1 = new AtomicInteger(0);
+        int[] d = dense_mask.toIntVector();
         long[] array1 = Arrays.stream(label_array.toLongVector()).filter(o ->
-                dense_mask.toIntVector()[index1.getAndIncrement()] == 1).toArray();
+                d[index1.getAndIncrement()] == 1).toArray();
         INDArray label_ind = Nd4j.createFromArray(array1);
 
         INDArray t = base_ops.reshape(base_ops.tile(Nd4j.arange(0, s[0]).castTo(DataType.INT64), max_num_labels_tns),
                 base_ops.reverse(shape, 0));
         INDArray batch_array = base_ops.transpose(t);
         AtomicInteger index2 = new AtomicInteger(0);
-        long[] array2 = Arrays.stream(label_array.toLongVector()).filter(o ->
-                dense_mask.toIntVector()[index2.getAndIncrement()] == 1).toArray();
+        long[] array2 = Arrays.stream(batch_array.toLongVector()).filter(o ->
+                d[index2.getAndIncrement()] == 1).toArray();
         INDArray batch_ind = Nd4j.createFromArray(array2);
 
         INDArray indices = base_ops.transpose(base_ops.reshape(Nd4j.concat(0, batch_ind, label_ind), 2, -1));
-        INDArray vals_sparse =  base_ops.gatherNd(labels, indices);
+        INDArray vals_sparse = base_ops.gatherNd(labels, indices);
         return new SparseTensor(indices, vals_sparse, shape);
     }
 
