@@ -1,17 +1,21 @@
 package pojo;
 
 import org.apache.commons.lang3.StringUtils;
+import org.deeplearning4j.nn.gradient.DefaultGradient;
+import org.deeplearning4j.nn.gradient.Gradient;
 import org.nd4j.linalg.api.buffer.DataType;
 import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.factory.Nd4j;
 import org.nd4j.linalg.indexing.NDArrayIndex;
+import org.nd4j.linalg.learning.AdamUpdater;
+import org.nd4j.linalg.learning.config.Adam;
 import org.tensorflow.Graph;
 import org.tensorflow.Operand;
 import org.tensorflow.Output;
 import org.tensorflow.Session;
-import org.tensorflow.framework.optimizers.Adam;
 import org.tensorflow.op.Op;
 import org.tensorflow.op.Ops;
+import org.tensorflow.op.core.Gradients;
 import org.tensorflow.op.nn.CtcBeamSearchDecoder;
 import org.tensorflow.op.nn.CtcLoss;
 import org.tensorflow.op.train.ApplyAdam;
@@ -20,9 +24,7 @@ import org.tensorflow.types.TFloat32;
 import org.tensorflow.types.TInt64;
 import org.tensorflow.types.TString;
 import org.tensorflow.types.family.TType;
-import utils.CTC;
-import utils.DataConvert;
-import utils.Tf_logits;
+import utils.*;
 import utils.waveaccess.WaveFileWriter;
 
 import java.lang.reflect.Method;
@@ -181,7 +183,9 @@ public class Attack {
                 SparseTensor labels = CTC.ctc_label_dense_to_sparse(target_phrase, target_phrase_lengths);
                 Operand labelIndices = DataConvert.nd2tf(tf, labels.getIndices().dup());
                 Operand labelValues = DataConvert.nd2tf(tf, labels.getValues().dup());
-                ctcLoss = tf.nn.ctcLoss(inputs, tf.dtypes.cast(labelIndices, TInt64.class), labelValues, sequenceLength);
+
+                ctcLoss = tf.nn.ctcLoss(inputs, tf.dtypes.cast(labelIndices, TInt64.class), labelValues, sequenceLength,
+                        CtcLoss.ctcMergeRepeated(true), CtcLoss.preprocessCollapseRepeated(false), CtcLoss.ignoreLongerOutputsThanInputs(false));
 
                 try(Session session = new Session(graph)) {
                     this.ctc_loss = DataConvert.tf2nd(session, tf, ctcLoss.loss());
@@ -200,30 +204,31 @@ public class Attack {
             }
             this.loss = loss;
 
-            Operand<TString> prefix = tf.constant(this.restore_path);
-            Operand<TString> tensornames = tf.constant(Charset.defaultCharset(), new String[]{"beta1_power","beta2_power"});
-            Operand<TString> shapeAndSlices = tf.constant(Charset.defaultCharset(), new String[]{"", ""});
-            List<Class<? extends TType>> dtypes = new ArrayList<>();
-            dtypes.add(TFloat32.class);
-            dtypes.add(TFloat32.class);
-            Restore restore = tf.train.restore(prefix, tensornames, shapeAndSlices, dtypes);
+//            LossCTC lossCTC = new LossCTC(3, 1);
+//            INDArray grad = lossCTC.computeCtcGradient(this.loss.reshape(1, 1), this.delta);
 
-            Adam adam  = new Adam(graph, this.learning_rate);
-            Class c = adam.getClass();
-            Method createSlots = c.getDeclaredMethod("createSlots", List.class);
-            createSlots.setAccessible(true);
-            createSlots.invoke(adam, restore.tensors());
+//            Operand d = tf.variable(tf.constant(0f));
+//            Operand m = tf.variable(tf.constant(0f));
+//            Operand v = tf.variable(tf.constant(0f));
+//            Operand beta1_power = tf.constant(0.80999994f);
+//            Operand beta2_power = tf.constant(0.99800104f);
+//            Operand lr = tf.constant(this.learning_rate);
+//            Operand beta1 = tf.constant(0.9f);
+//            Operand beta2 = tf.constant(0.999f);
+//            Operand epsilon = tf.constant(1e-8f);
+//            List l = new ArrayList();
+//            l.add(d);
+//            ApplyAdam adam = tf.train.applyAdam(d, m, v, beta1_power, beta2_power, tf.dtypes.cast(lr, TFloat32.class),
+//                    beta1, beta2, epsilon, tf.constant(1f), ApplyAdam.useLocking(false));
 
-            List list = adam.computeGradients(ctcLoss.loss());
-            Op re = adam.applyGradients(list, "wox");
-
-            try(Session session = new Session(graph)) {
-                session.run(tf.init());
-                session.runner().addTarget(re).run();
-                System.out.println();
-            }
-
-//            ApplyAdam adam = tf.train.applyAdam(ctcLoss.loss(), m, v, beta1_power, beta2_power, lr, beta1, beta2, epsilon, g, ApplyAdam.useLocking(false));
+//            AdamOptimzer optimzer = new AdamOptimzer(this.loss.getDouble(0));
+//            double[][] d = this.delta.toDoubleMatrix();
+//            for (int i = 0; i < d.length; i++) {
+//                double[] tm =  Arrays.stream(d[i]).map(dou -> optimzer.apply(dou, 100, 0.9, 0.999, 1e-8)).toArray();
+//                d[i] = tm;
+//            }
+            INDArray r = PyCall.UpdateDelta(this.target_phrase, this.target_phrase_lengths.castTo(DataType.INT32));
+            this.delta =  r!= null ? r : this.delta;
 
             decode = tf.nn.ctcBeamSearchDecoder(inputs, sequenceLength, 100L, 1L);
             Output va = (Output) decode.decodedValues().get(0);
@@ -240,8 +245,6 @@ public class Attack {
         double[][] final_deltas = new double[((int) this.batch_size)][];
 
         //Todo finetune
-//        if finetune is not None and len(finetune) > 0:
-//        sess.run(self.delta.assign(finetune - audio))
 
         Date date = new Date();
         for (int i = 0; i < this.getNum_iterations(); i++){
@@ -252,9 +255,8 @@ public class Attack {
             if (i % 10 == 0) {
                 Map<SparseTensor, INDArray> lst = new HashMap<>();
                 lst.put(this.decoded, this.logits);
-//                if(this.mp3){
-//                    this.do_something();//Todo
-//                }
+
+                //Todo this.mp3
                 for (Map.Entry<SparseTensor, INDArray> entry : lst.entrySet()){
                     SparseTensor s = entry.getKey();
                     res = res.add(Variables.TOKENS.length() - 1);
@@ -267,15 +269,8 @@ public class Attack {
                     }
                 }
             }
-
-//            if (this.mp3){
-//                this.do_something();//Todo
-//            }else {
-//
-//            }
-
-            //Todo
-//            print("%.3f" % np.mean(cl), "\t", "\t".join("%.3f" % x for x in cl))
+            //Todo this.mp3
+            //todo print
 
             INDArray logits = Nd4j.argMax(this.logits.dup(), 2).transpose();
             for (int j = 0; j < this.getBatch_size(); j++) {

@@ -30,7 +30,6 @@ public class Tf_logits {
     }
 
     public INDArray get_logits(INDArray new_input, INDArray lengths) {
-        //new_input
         batch_size_F = new_input.size(0);
         batch_size = (int) batch_size_F;
 
@@ -44,15 +43,9 @@ public class Tf_logits {
         //# so concatenate them together.
         features = features.reshape((int) new_input.size(0), -1);
 
-//        features_tem1 = features.get(NDArrayIndex.all(), NDArrayIndex.interval(0, 19 * 26));
-//        for (int i = 26; i <= features.shape()[1] - 19 * 26 + 1; i = i + 26) {
-//            features_tem2 = features.get(NDArrayIndex.all(), NDArrayIndex.interval(i, i + 19 * 26));
-//            features_tem1 = Nd4j.stack(1, features_tem1, features_tem2);
-//        }
-//        features = features_tem1;
         INDArray[] f = new INDArray[(int) ((features.shape()[1] - 493) / 26 + 1)];
         for (int i = 0; i < features.shape()[1] - 493; i = i + 26) {
-            f[i/26] = features.get(NDArrayIndex.all(), NDArrayIndex.interval(i, i + 494));
+            f[i / 26] = features.get(NDArrayIndex.all(), NDArrayIndex.interval(i, i + 494));
         }
         features = Nd4j.stack(1, f);
 
@@ -100,12 +93,6 @@ public class Tf_logits {
         audio = Nd4j.concat(1, audio1, audio2.sub(audio3), audio4);
 
         //# 2. windowing into frames of 512 samples, overlapping
-//        windowed1 = audio.get(NDArrayIndex.all(), NDArrayIndex.interval(0, 512));
-//        for (int i = 320; i <= size - 320; i = i + 320) {
-//            windowed2 = audio.get(NDArrayIndex.all(), NDArrayIndex.interval(i, i + 512));
-//            windowed1 = Nd4j.concat(0, windowed1, windowed2);
-//        }
-//        windowed = Nd4j.stack(0, windowed1);
         INDArray[] win = new INDArray[(size - 320) / 320 + 1];
         for (int i = 0; i < size - 320; i = i + 320) {
             win[i/320] = audio.get(NDArrayIndex.all(), NDArrayIndex.interval(i, i + 512));

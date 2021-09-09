@@ -3,5 +3,6 @@
   <component name="VcsDirectoryMappings">
     <mapping directory="$PROJECT_DIR$" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/src/main/DeepSpeech" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/src/main/java/dl4j-ocr-demo" vcs="Git" />
   </component>
 </project>

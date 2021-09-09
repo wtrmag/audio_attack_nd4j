@@ -39,18 +39,13 @@
         <dependency>
             <groupId>ch.qos.logback</groupId>
             <artifactId>logback-classic</artifactId>
-            <version>1.1.7</version>
+            <version>1.2.3</version>
         </dependency>
         <dependency>
             <groupId>org.nd4j</groupId>
             <artifactId>nd4j-api</artifactId>
             <version>1.0.0-M1.1</version>
         </dependency>
-<!--        <dependency>-->
-<!--            <groupId>org.tensorflow</groupId>-->
-<!--            <artifactId>libtensorflow</artifactId>-->
-<!--            <version>1.5.0</version>-->
-<!--        </dependency>-->
         <dependency>
             <groupId>org.tensorflow</groupId>
             <artifactId>tensorflow-framework</artifactId>
@@ -58,14 +53,20 @@
         </dependency>
         <dependency>
             <groupId>org.tensorflow</groupId>
-            <artifactId>tensorflow-core-generator</artifactId>
+            <artifactId>tensorflow-core-api</artifactId>
             <version>0.3.3</version>
+            <classifier>windows-x86_64</classifier>
         </dependency>
-        <dependency>
-            <groupId>org.tensorflow</groupId>
-            <artifactId>tensorflow-core-platform</artifactId>
-            <version>0.3.3</version>
-        </dependency>
+<!--        <dependency>-->
+<!--            <groupId>org.tensorflow</groupId>-->
+<!--            <artifactId>tensorflow-core-generator</artifactId>-->
+<!--            <version>0.3.3</version>-->
+<!--        </dependency>-->
+<!--        <dependency>-->
+<!--            <groupId>org.tensorflow</groupId>-->
+<!--            <artifactId>tensorflow-core-platform</artifactId>-->
+<!--            <version>0.3.3</version>-->
+<!--        </dependency>-->
         <!-- https://mvnrepository.com/artifact/args4j/args4j -->
         <dependency>
             <groupId>args4j</groupId>

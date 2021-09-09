@@ -6,6 +6,7 @@ import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.factory.Nd4j;
 import org.tensorflow.Operand;
 import org.tensorflow.Output;
+import org.tensorflow.RawTensor;
 import org.tensorflow.Session;
 import org.tensorflow.ndarray.buffer.ByteDataBuffer;
 import org.tensorflow.op.Ops;
@@ -14,7 +15,8 @@ import java.io.File;
 
 public class DataConvert {
 
-    public static final String[] NPY_NAME = {"features.npy", "lengths.npy", "logits.npy", "temp.csv"};
+//    public static final String[] NPY_NAME = {"features.npy", "lengths.npy", "logits.npy", "loss.npy", "var.npy", "delta.npy"};
+    public static final String[] NPY_NAME = {"data1.npy", "data2.npy", "logit.npy" ,"result.npy"};
 
     /**
      * @author wtr
@@ -79,11 +81,11 @@ public class DataConvert {
         int[] INT_VALUE = new int[]{3, 5, 6,7, 9, 10};
         int[] FLOAT_VALUE = new int[]{1, 2};
 
-        int size = (int) tensor.size();
-        int rank = tensor.rank();
-        long[] shape = tensor.shape().asArray();
-
-        ByteDataBuffer dataBuffer = session.runner().fetch(tensor).run().get(0).asRawTensor().data();
+        RawTensor rawTensor = session.runner().fetch(tensor).run().get(0).asRawTensor();
+        int rank = rawTensor.rank();
+        long[] shape = rawTensor.shape().asArray();
+        int size = (int) rawTensor.size();
+        ByteDataBuffer dataBuffer = rawTensor.data();
         int type_value = tensor.dataType().getNumber();
 
         int[] array1 = new int[size];

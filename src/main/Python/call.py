@@ -30,4 +30,4 @@ if __name__ == '__main__':
         file = "src/main/resources/temp/"
         if not os.path.exists(file):
             os.mkdir(file)
-        np.save(os.path.join(file, "logits.npy"), l)
+        np.save(os.path.join(file, "logit.npy"), l)
