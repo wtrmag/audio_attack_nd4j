@@ -109,23 +109,24 @@ public class Audio_Attack {
             //Todo convert_mp3
             throw new Exception("unfinshed");
         }else {
-            if (StringUtils.equals("", this.out)) {
+            if (!StringUtils.equals(this.out, null)) {
                 path = this.out;
             }else {
                 path = this.out_prefix + ".wav";
             }
-            File file = new File(Variables.RESULTS);
+            File file = new File(Variables.RESULTS+path);
             if (!file.exists()){
-                if (!file.getParentFile().exists()){
-                    file.getParentFile().mkdirs();
+                File parent = file.getParentFile();
+                if (!parent.exists()){
+                    parent.mkdirs();
                 }
                 file.createNewFile();
-            }else {
-                INDArray out = Nd4j.create(Arrays.stream(deltas[0]).limit(lengths[0]).toArray());
-                int[][] r = Nd4j.math.clipByValue(Nd4j.math.round(out), Math.pow(-2, 15), Math.pow(2, 15)-1).toIntMatrix();
-                WaveFileWriter writer = new WaveFileWriter(Variables.RESULTS+path, r, 16000);
-                writer.close();
             }
+            INDArray out = Nd4j.expandDims(Nd4j.create(Arrays.stream(deltas[0]).limit(lengths[0]).toArray()), 0);
+            int[][] r = Nd4j.math.clipByValue(Nd4j.math.round(out), Math.pow(-2, 15), Math.pow(2, 15)-1).toIntMatrix();
+            WaveFileWriter writer = new WaveFileWriter(file.getPath(), r, 16000);
+            writer.close();
+            System.out.println("end!");
         }
     }
 

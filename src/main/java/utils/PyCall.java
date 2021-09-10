@@ -21,7 +21,9 @@ public class PyCall {
         INDArray logits = null;
         try {
             DataConvert.export(Variables.TEMP, features, lengths);
-            String[] command = new String[]{Variables.PYTHON_PATH, "src/main/Python/call.py", "-f"+Variables.TEMP+DataConvert.NPY_NAME[0], "-l"+Variables.TEMP+DataConvert.NPY_NAME[1]};
+            String[] command = new String[]{Variables.PYTHON_PATH, "src/main/Python/call.py",
+                    "-f"+Variables.TEMP+DataConvert.NPY_NAME[0],
+                    "-l"+Variables.TEMP+DataConvert.NPY_NAME[1]};
             Process p = Runtime.getRuntime().exec(command);
             // 防止缓冲区满, 导致卡住
             new Thread() {
@@ -75,11 +77,17 @@ public class PyCall {
         return logits;
     }
 
-    public static INDArray UpdateDelta(INDArray loss, INDArray delta){
+    public static List UpdateDelta(INDArray loss, INDArray delta, int lr, int len){
         INDArray delta_new = null;
+        final double[] ctc_loss = new double[1];
         try {
             DataConvert.export(Variables.TEMP, loss, delta);
-            String[] command = new String[]{Variables.PYTHON_PATH, "src/main/Python/update.py", "-t"+Variables.TEMP+DataConvert.NPY_NAME[0], "-l"+Variables.TEMP+DataConvert.NPY_NAME[1]};
+            String[] command = new String[]{Variables.PYTHON_PATH, "src/main/Python/update.py",
+                    "-t"+Variables.TEMP+DataConvert.NPY_NAME[0],
+                    "-l"+Variables.TEMP+DataConvert.NPY_NAME[1],
+                    "-r"+lr,
+                    "-s"+len
+            };
             Process p = Runtime.getRuntime().exec(command);
             // 防止缓冲区满, 导致卡住
             new Thread() {
@@ -110,6 +118,7 @@ public class PyCall {
                         BufferedReader stdout = new BufferedReader(new InputStreamReader(p.getInputStream()));
                         while ((line = stdout.readLine()) != null) {
                             System.out.println(line);
+                            ctc_loss[0] = Double.parseDouble(line);
                         }
                     }
                     catch (Exception e) {
@@ -129,7 +138,9 @@ public class PyCall {
         catch (Exception e) {
             e.printStackTrace();
         }
-
-        return delta_new;
+        List list = new ArrayList();
+        list.add(delta_new);
+        list.add(ctc_loss[0]);
+        return list;
     }
 }

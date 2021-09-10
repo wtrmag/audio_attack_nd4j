@@ -80,7 +80,7 @@ public class Attack {
 
     public INDArray ctc_loss;
 
-    public Operand expanded_loss;
+    public INDArray expanded_loss;
 
     public ApplyAdam train;
 
@@ -171,64 +171,28 @@ public class Attack {
 
         this.logits  = new Tf_logits().get_logits(pass_in, this.lengths);
 
-        CtcLoss ctcLoss;
-        INDArray loss;
+        if ("CTC".equals(loss_fn)) {
+            List list = PyCall.UpdateDelta(this.target_phrase, this.target_phrase_lengths.castTo(DataType.INT32), this.learning_rate, length[0]);
+            this.delta =  list.get(0)!= null ? (INDArray) list.get(0) : this.delta;
+            this.ctc_loss = Nd4j.createFromArray((double) list.get(1));
+
+            if (l2penalty != Float.POSITIVE_INFINITY){
+                loss = Nd4j.math().add(Nd4j.mean(Nd4j.math().pow(Nd4j.math().sub(this.new_input, this.original),
+                        2), 0), Nd4j.math().mul(ctc_loss, this.l2penalty));
+            } else {
+                loss = this.ctc_loss;
+            }
+            this.expanded_loss = Nd4j.createFromArray(0);
+        }else {
+            throw new Exception("unfinished");
+        }
+        this.loss = loss;
+
         CtcBeamSearchDecoder decode;
         try(Graph graph = new Graph()) {
             Ops tf =  Ops.create(graph);
-
             Operand inputs = DataConvert.nd2tf(tf, this.logits.dup());
             Operand sequenceLength = DataConvert.nd2tf(tf, this.lengths.dup());
-            if ("CTC".equals(loss_fn)) {
-                SparseTensor labels = CTC.ctc_label_dense_to_sparse(target_phrase, target_phrase_lengths);
-                Operand labelIndices = DataConvert.nd2tf(tf, labels.getIndices().dup());
-                Operand labelValues = DataConvert.nd2tf(tf, labels.getValues().dup());
-
-                ctcLoss = tf.nn.ctcLoss(inputs, tf.dtypes.cast(labelIndices, TInt64.class), labelValues, sequenceLength,
-                        CtcLoss.ctcMergeRepeated(true), CtcLoss.preprocessCollapseRepeated(false), CtcLoss.ignoreLongerOutputsThanInputs(false));
-
-                try(Session session = new Session(graph)) {
-                    this.ctc_loss = DataConvert.tf2nd(session, tf, ctcLoss.loss());
-                    System.out.println("");
-                }
-
-                if (l2penalty != Float.POSITIVE_INFINITY){
-                    loss = Nd4j.math().add(Nd4j.mean(Nd4j.math().pow(Nd4j.math().sub(this.new_input, this.original),
-                            2), 0), Nd4j.math().mul(ctc_loss, this.l2penalty));
-                } else {
-                    loss = this.ctc_loss;
-                }
-                this.expanded_loss = tf.constant(0);
-            }else {
-                throw new Exception("unfinished");
-            }
-            this.loss = loss;
-
-//            LossCTC lossCTC = new LossCTC(3, 1);
-//            INDArray grad = lossCTC.computeCtcGradient(this.loss.reshape(1, 1), this.delta);
-
-//            Operand d = tf.variable(tf.constant(0f));
-//            Operand m = tf.variable(tf.constant(0f));
-//            Operand v = tf.variable(tf.constant(0f));
-//            Operand beta1_power = tf.constant(0.80999994f);
-//            Operand beta2_power = tf.constant(0.99800104f);
-//            Operand lr = tf.constant(this.learning_rate);
-//            Operand beta1 = tf.constant(0.9f);
-//            Operand beta2 = tf.constant(0.999f);
-//            Operand epsilon = tf.constant(1e-8f);
-//            List l = new ArrayList();
-//            l.add(d);
-//            ApplyAdam adam = tf.train.applyAdam(d, m, v, beta1_power, beta2_power, tf.dtypes.cast(lr, TFloat32.class),
-//                    beta1, beta2, epsilon, tf.constant(1f), ApplyAdam.useLocking(false));
-
-//            AdamOptimzer optimzer = new AdamOptimzer(this.loss.getDouble(0));
-//            double[][] d = this.delta.toDoubleMatrix();
-//            for (int i = 0; i < d.length; i++) {
-//                double[] tm =  Arrays.stream(d[i]).map(dou -> optimzer.apply(dou, 100, 0.9, 0.999, 1e-8)).toArray();
-//                d[i] = tm;
-//            }
-            INDArray r = PyCall.UpdateDelta(this.target_phrase, this.target_phrase_lengths.castTo(DataType.INT32));
-            this.delta =  r!= null ? r : this.delta;
 
             decode = tf.nn.ctcBeamSearchDecoder(inputs, sequenceLength, 100L, 1L);
             Output va = (Output) decode.decodedValues().get(0);
@@ -237,7 +201,25 @@ public class Attack {
 
             try(Session session = new Session(graph)) {
                 session.run(tf.init());
-                this.decoded = new SparseTensor(DataConvert.tf2nd(session, tf, i), DataConvert.tf2nd(session, tf, va), DataConvert.tf2nd(session, tf, s));
+                int[][]  t_i = DataConvert.tf2nd(session, tf, i).toIntMatrix();
+                int[] t_v = DataConvert.tf2nd(session, tf, va).toIntVector();
+                int remove_indice_len;
+                if (t_i.length % 2 == 0){
+                    remove_indice_len = t_i.length / 2;
+                }else {
+                    remove_indice_len = t_i.length / 2 + 1;
+                }
+                Object[] t_in = Arrays.stream(t_i).sorted(Comparator.comparing(ints -> ints[0])).skip(remove_indice_len).toArray();
+                int[][] indices = new int[t_in.length][2];
+                for (int j = 0; j < t_in.length; j++) {
+                    indices[j] = (int[]) t_in[j];
+                }
+                int[] values = new int[t_v.length - remove_indice_len];
+                for (int j = 0; j < values.length; j++) {
+                    values[j] = t_v[j*2];
+                }
+                int[] shape = new int[]{1, t_i.length/2};
+                this.decoded = new SparseTensor(Nd4j.createFromArray(indices), Nd4j.createFromArray(values), Nd4j.createFromArray(shape));
             }
 
         }
@@ -250,7 +232,7 @@ public class Attack {
         for (int i = 0; i < this.getNum_iterations(); i++){
             long now = date.getTime();
 
-            INDArray res = Nd4j.zeros(this.decoded.getDenseShape().shape());
+            INDArray res = Nd4j.zeros(this.decoded.getDenseShape().toIntVector());
             //todo print信息
             if (i % 10 == 0) {
                 Map<SparseTensor, INDArray> lst = new HashMap<>();
@@ -261,8 +243,8 @@ public class Attack {
                     SparseTensor s = entry.getKey();
                     res = res.add(Variables.TOKENS.length() - 1);
                     for (int j = 0; j < s.getValues().length(); j++) {
-                        int x = s.getIndices().get(NDArrayIndex.point(j), NDArrayIndex.point(0)).getInt(0);
-                        int y = s.getIndices().get(NDArrayIndex.point(j), NDArrayIndex.point(1)).getInt(0);
+                        int y = s.getIndices().get(NDArrayIndex.point(j), NDArrayIndex.point(0)).getInt(0);
+                        int x = s.getIndices().get(NDArrayIndex.point(j), NDArrayIndex.point(1)).getInt(0);
 
                         res.put(x, y, s.getValues().get(NDArrayIndex.point(j)));
                         //todo print
@@ -272,6 +254,14 @@ public class Attack {
             //Todo this.mp3
             //todo print
 
+            StringBuilder str_res = new StringBuilder();
+            int[][] t_res = res.toIntMatrix();
+            for (int j = 0; j < t_res.length; j++) {
+                for (int r : t_res[j]) {
+                    str_res.append(Variables.TOKENS.charAt(r));
+                }
+            }
+            str_res = new StringBuilder(String.join("", str_res).replace("-", ""));
             INDArray logits = Nd4j.argMax(this.logits.dup(), 2).transpose();
             for (int j = 0; j < this.getBatch_size(); j++) {
                 StringBuilder builder = new StringBuilder();
@@ -279,8 +269,8 @@ public class Attack {
                     char c = Variables.TOKENS.charAt(x);
                     builder.append(c);
                 }
-                boolean b = (StringUtils.equals("CTC", this.loss_fn) && i % 10 == 0 && StringUtils.equals(res.getString(j), String.join("", builder)))
-                        || (i == this.getNum_iterations());
+                boolean b = (StringUtils.equals("CTC", this.loss_fn) && i % 10 == 0 && StringUtils.equals(str_res.toString(), String.join("", builder)))
+                        || (i == this.getNum_iterations() - 1);
                 if (b) {
                     INDArray rescale = this.rescale.dup();
                     if (rescale.getDouble(j) * 2000 > this.delta.dup().amaxNumber().doubleValue()){
@@ -294,7 +284,7 @@ public class Attack {
 
                     INDArray round = Nd4j.math.round(this.new_input.dup().get(NDArrayIndex.point(j)));
                     INDArray result = Nd4j.math.clipByValue(round, Math.pow(-2, 15), Math.pow(2, 15)-1);
-                    WaveFileWriter writer = new WaveFileWriter(Variables.TEMP+"adv.wav", result.toIntMatrix(), 16000);
+                    WaveFileWriter writer = new WaveFileWriter(Variables.TEMP+"adv.wav", Nd4j.expandDims(result, 0).toIntMatrix(), 16000);
                     writer.close();
                 }
             }
