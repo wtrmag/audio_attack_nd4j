@@ -26,7 +26,7 @@ if __name__ == '__main__':
         logits, _ = DeepSpeech.BiRNN(features, lengths, [0] * 10)
         sess.run(tf.global_variables_initializer())
         l = sess.run(logits)
-        # print(l)
+
         file = "src/main/resources/temp/"
         if not os.path.exists(file):
             os.mkdir(file)

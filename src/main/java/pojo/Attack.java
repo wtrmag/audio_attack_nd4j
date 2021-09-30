@@ -105,6 +105,8 @@ public class Attack {
     }
 
     public double[][] do_attack(int[][] audio, int[] length, int[][] target, int[][] finetune) throws Exception {
+        long start = new Date().getTime();
+
         this.original = Nd4j.create(audio);
         INDArray nd = Nd4j.createFromArray(length).sub(1).div(320);
         this.lengths = nd.dup();
@@ -228,10 +230,7 @@ public class Attack {
 
         //Todo finetune
 
-        Date date = new Date();
         for (int i = 0; i < this.getNum_iterations(); i++){
-            long now = date.getTime();
-
             INDArray res = Nd4j.zeros(this.decoded.getDenseShape().toIntVector());
             //todo print信息
             if (i % 10 == 0) {
@@ -290,6 +289,9 @@ public class Attack {
             }
         }
 
+        long end = new Date().getTime();
+        long time = end - start;
+        System.out.println("total time:"+time);
         return final_deltas;
     }
 
